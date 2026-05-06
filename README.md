@@ -26,39 +26,38 @@ atomics/AML.T0051.001/rag_corpus.md   ← technique + vector
 
 ---
 
-## Quick start
+## 60-second snapshot
 
 ```bash
-# Lightweight install — list, recon, report, validate, MCP server.
-# Right for atomic authors and the agent-runner MCP layer.
-pip install atomic-atlas
-
-# Full install — adds PyRIT and unlocks `exec`. Pulls in PyRIT's transitive
-# deps (azure-ai, openai, anthropic, chromadb, etc.). Required for keynote
-# demo and any actual atomic execution.
+# Full install (Python 3.10–3.13). PyRIT is in [orchestrator] — opt-in;
+# the base install is enough for list / recon / report / validate / MCP.
 pip install 'atomic-atlas[orchestrator]'
 
-# Enumerate atomics in the catalog (no PyRIT needed)
-atomic-atlas list
-atomic-atlas list --vector rag_corpus --json
-
-# Enumerate which vectors your target exposes (no PyRIT needed)
-atomic-atlas recon --target http://dvaa.local
-
-# Run a specific atomic (PyRIT required; --authorized confirms permission)
+atomic-atlas list                                              # browse the catalog
+atomic-atlas recon --target http://localhost:8080              # fingerprint a target
 atomic-atlas exec AML.T0051.001/rag_corpus \
-  --target http://dvaa.local \
+  --target http://localhost:8080 \
   --profile targets/dvaa_local.yaml \
-  --authorized
-
-# Generate ATLAS Navigator layer from results
-atomic-atlas report --input results.json --format navigator --output layer.json
-
-# Show coverage matrix
-atomic-atlas report --input results.json --format coverage
+  --authorized                                                 # run the flagship atomic
+atomic-atlas report --input results.json --format navigator    # ATLAS Navigator layer JSON
 ```
 
 > **Authorization required.** Running these tests against systems you do not own or have written permission to test is unethical and likely illegal. The `--authorized` flag is your confirmation.
+
+For the full walkthrough — installing, bringing up [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), running the demo end-to-end, opening the result in ATLAS Navigator — see **[docs/quickstart.md](docs/quickstart.md)**.
+
+---
+
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report |
+| [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
+| [docs/targets.md](docs/targets.md) | Target profile format, DVAA setup, Lakera Gandalf alternative, auth schemes |
+| [docs/agent-runner.md](docs/agent-runner.md) | Claude Code skill + MCP server, when to use them vs the CLI |
+| [SPEC.md](SPEC.md) | Atomic format reference (frontmatter, body sections, vectors, payloads) |
+| [PRD.md](PRD.md) | Product requirements + milestone scope |
 
 ---
 
@@ -84,33 +83,12 @@ The same ATLAS technique entering through different vectors is a different attac
 
 ## Agent runner
 
-The agent runner is a layer **above** the CLI. The CLI is the deterministic primitive; the agent reasons about which atomic to run, adapts payloads to the observed target, evaluates success semantically, and chains atomics into a kill chain. The agent only bypasses the CLI when no adapter exists for the vector or for the target's specific backend.
+A layer **above** the CLI. The CLI is the deterministic primitive; the agent reasons about which atomic to run, adapts payloads to the observed target, evaluates success semantically, and chains atomics. Two implementations, one contract:
 
-Two implementations, one contract:
+- **Claude Code skill** — `/atomic-atlas exec AML.T0051.001/rag_corpus --target http://custom-agent.local`
+- **MCP server** — `pip install 'atomic-atlas[mcp-server]' && atomic-atlas-mcp` for Hermes, GPT-4o, Gemini, AutoGen, LangChain, and any other MCP-capable agent.
 
-### Claude Code skill (`skill/atomic-atlas.md`)
-
-```
-/atomic-atlas exec AML.T0051.001/rag_corpus --target http://custom-agent.local
-```
-
-The skill calls `atomic-atlas list / recon / exec / report` as its primary path; manual delivery (raw HTTP, custom Python) is the documented fallback for vectors with no CLI adapter.
-
-### MCP server (`atomic-atlas-mcp`)
-
-For Hermes, GPT-4o, Gemini, AutoGen, LangChain, and any other MCP-capable agent.
-
-```bash
-pip install 'atomic-atlas[mcp-server]'
-atomic-atlas-mcp                       # stdio MCP server
-```
-
-Exposes three read-only tools (no PyRIT required):
-- `list_atomics(vector?, technique?)` — catalog discovery
-- `read_atomic(path)` — full atomic content
-- `recon_target(target, auth_header?)` — vector fingerprinting
-
-`exec_atomic` over MCP is deferred to v0.2 (needs profile/auth transport design).
+See **[docs/agent-runner.md](docs/agent-runner.md)** for the full surface, fallback rules, and MCP client config.
 
 ---
 
