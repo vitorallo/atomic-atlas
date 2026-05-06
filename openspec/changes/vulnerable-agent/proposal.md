@@ -42,8 +42,9 @@ This is what makes it a reference implementation instead of "just another vulner
 
 The atlas-agentic-coverage change tracks 21 agentic ATLAS techniques as the v0.1+v0.2 catalog target. The vulnerable agent aims to cover **17 of those 21** in v0.2 — every technique that's testable on a single-process agent without computer-use sandboxing or full A2A protocol implementation:
 
-- ✓ Covered in v0.2: T0051.000, T0051.001, T0053, T0065, T0086, T0093, T0096, T0097, T0098, T0099, T0101, T0104, T0109, T0110, T0111, T0112, T0113, T0114
-- ✗ Deferred to v0.3 (need A2A or computer-use scaffolding): T0100 (Computer Use), T0115 (Indirect Exfil via A2A), T0116 (Chain Hijack), T0102 / T0098-A2A variants
+- ✓ Covered in v0.2 (real ATLAS v5.6.0 IDs): T0051.000, T0051.001, T0053, T0065, T0070, T0080, T0080.000, T0083, T0084.001, T0086, T0093, T0096, T0097, T0098, T0099, T0101, T0104, T0108, T0109, T0110, T0111, T0112
+- ✓ Covered in v0.2 (unclassified — no current ATLAS technique covers the pattern): UNCLASSIFIED.scope-violation, UNCLASSIFIED.authorization-bypass
+- ✗ Deferred to v0.3: T0100 (Computer Use — needs sandbox), T0102 (Memory Persistence — needs cross-restart store), AML.T0086/a2a_message (was phantom T0115; now a matrix cell of T0086), UNCLASSIFIED.chain-hijack-a2a (was phantom T0116)
 
 The full mapping table lives in [specs.md](specs.md).
 
@@ -81,7 +82,7 @@ DVAA stays referenced as the elaborate alternative. Our LangGraph agent is the *
 
 - [ ] proposal + specs + tasks (this change)
 - [ ] LangGraph agent skeleton + Dockerfile + docker-compose.yml
-- [ ] 17 ATLAS techniques implemented as tagged vulnerabilities in the agent code
+- [ ] 22 weaknesses tagged in the agent source: 20 ATLAS-v5.6.0 IDs + 2 UNCLASSIFIED.* slugs (full table in specs.md)
 - [ ] Each tagged vulnerability has a corresponding atomic in `atomics/` (some new for v0.2)
 - [ ] CI: spin up the agent, run all atomics against it, verify reasonable success rate per technique
 - [ ] README documenting safety boundary, ATLAS mapping table, and how to add a new vulnerability + atomic together

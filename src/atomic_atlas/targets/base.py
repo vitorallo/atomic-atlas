@@ -73,12 +73,12 @@ class AtomicAtlasTarget(PromptTarget):  # type: ignore[misc]
         """Restore the target to its pre-test state."""
 
     @abc.abstractmethod
-    async def send_prompt_async(self, *, prompt_request):  # type: ignore[no-untyped-def]
+    async def send_prompt_async(self, *, message):  # type: ignore[no-untyped-def]
         """Deliver the interaction turn to the agent and return its response.
 
-        The signature uses ``PromptRequestResponse`` from ``pyrit.models`` at
-        runtime; the annotation is intentionally untyped here so the module
-        imports cleanly without PyRIT installed (combined with
+        Matches PyRIT 0.13's PromptTarget API: takes ``message: Message`` and
+        returns ``list[Message]``. The annotation is intentionally untyped so
+        the module imports cleanly without PyRIT installed (paired with
         ``from __future__ import annotations``).
         """
 

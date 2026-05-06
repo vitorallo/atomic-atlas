@@ -93,8 +93,9 @@ class WebhookTarget(AtomicAtlasTarget):
     def callback_received(self) -> bool:
         return getattr(self, "_received_ref", [False])[0]
 
-    async def send_prompt_async(self, *, prompt_request):
+    async def send_prompt_async(self, *, message):
         from pyrit.models import construct_response_from_request
+        request_piece = message.message_pieces[0]
         if not self._webhook_url:
             raise ValueError("WebhookTarget: 'webhook_url' not set in adapter config")
 
@@ -120,7 +121,7 @@ class WebhookTarget(AtomicAtlasTarget):
         await asyncio.sleep(2)
 
         success_hint = "callback received" if self.callback_received else "no callback"
-        return construct_response_from_request(
-            request=prompt_request,
+        return [construct_response_from_request(
+            request=request_piece,
             response_text_pieces=[f"Webhook delivered (HTTP {resp.status_code}). {success_hint}."],
-        )
+        )]

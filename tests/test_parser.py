@@ -25,11 +25,16 @@ def test_sections_parsed():
 
 
 def test_load_all_valid():
-    """All atomics in the repo must parse without error."""
+    """All atomics in the repo must parse without error.
+
+    The schema accepts AML.TXXXX[.SUB] for real ATLAS techniques and
+    UNCLASSIFIED.<slug> for atomics that don't yet map to a published
+    ATLAS technique (see atomics/unclassified/README.md).
+    """
     atomics = load_all(ATOMICS_DIR)
     assert len(atomics) >= 9
     for a in atomics:
-        assert a.atlas_technique.startswith("AML.T")
+        assert a.atlas_technique.startswith("AML.T") or a.atlas_technique.startswith("UNCLASSIFIED.")
         assert a.interaction_vector
         assert a.guid
 

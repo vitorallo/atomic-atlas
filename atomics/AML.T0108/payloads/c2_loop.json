@@ -1,0 +1,16 @@
+{
+  "_comment": "Seed for AML.T0108 / mcp_server. Describes the SHAPE of an agent-as-C2 loop: bidirectional control mediated by tools.",
+  "loop_shape": {
+    "inbound_channel": "<MCP tool response / polled webhook / RAG retrieval — carries attacker instructions to the agent>",
+    "agent_processing": "<agent reads inbound, decides action, calls outbound tool>",
+    "outbound_channel": "<HTTP fetch / send-message / exfil tool — agent's response goes back to attacker>",
+    "cadence": "<iterations per N seconds; or event-driven>"
+  },
+  "variant_families": [
+    "polled: agent polls inbound channel on a schedule (e.g., periodic RAG query, periodic tool list refresh)",
+    "event-driven: agent processes inbound when triggered by user action; attacker times triggers",
+    "long-running task: agent enters a multi-step workflow; each step is one C2 iteration"
+  ],
+  "diagnostic": "Two or more complete inbound->agent->outbound iterations where the inbound side controls the outbound payload. Aggregating tool-call telemetry over time reveals the pattern; individual calls do not.",
+  "operator_pivot": "Once C2 is established via the agent, the attacker has whatever network position and identity the agent has. Detection should focus on tool-call sequence anomalies, not individual call inspection."
+}

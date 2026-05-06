@@ -58,9 +58,10 @@ class DocumentUploadTarget(AtomicAtlasTarget):
         async with httpx.AsyncClient(timeout=15) as client:
             await client.delete(delete_url, headers=headers)
 
-    async def send_prompt_async(self, *, prompt_request):
+    async def send_prompt_async(self, *, message):
         from pyrit.models import construct_response_from_request
-        message = prompt_request.request_pieces[0].converted_value
+        request_piece = message.message_pieces[0]
+        user_text = request_piece.converted_value
         headers = {"Content-Type": "application/json", **self._auth_headers()}
         attachments = (
             [{"file_id": self._uploaded_file_id, "tools": [{"type": "file_search"}]}]
@@ -69,7 +70,7 @@ class DocumentUploadTarget(AtomicAtlasTarget):
         )
         body = {
             "model": self._adapter_config.get("model", "default"),
-            "messages": [{"role": "user", "content": message}],
+            "messages": [{"role": "user", "content": user_text}],
             "attachments": attachments,
         }
         async with httpx.AsyncClient(timeout=30) as client:
@@ -78,4 +79,4 @@ class DocumentUploadTarget(AtomicAtlasTarget):
             data = resp.json()
 
         reply = data["choices"][0]["message"]["content"]
-        return construct_response_from_request(request=prompt_request, response_text_pieces=[reply])
+        return [construct_response_from_request(request=request_piece, response_text_pieces=[reply])]

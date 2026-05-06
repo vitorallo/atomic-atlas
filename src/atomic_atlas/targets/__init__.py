@@ -15,6 +15,7 @@ __all__ = [
     "PYRIT_AVAILABLE",
     "PyRITNotInstalledError",
     "require_pyrit",
+    "DirectChatTarget",
     "RAGCorpusTarget",
     "MCPServerTarget",
     "ToolResponseTarget",
@@ -24,6 +25,7 @@ __all__ = [
 
 
 _LAZY_TARGETS = {
+    "DirectChatTarget": ("direct_chat", "DirectChatTarget"),
     "RAGCorpusTarget": ("rag_corpus", "RAGCorpusTarget"),
     "MCPServerTarget": ("mcp_server", "MCPServerTarget"),
     "ToolResponseTarget": ("tool_response", "ToolResponseTarget"),

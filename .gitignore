@@ -45,6 +45,8 @@ Thumbs.db
 # atomic-atlas runtime artifacts
 results.json
 *.results.json
+runbook-results.json
+*-runbook-results.json
 layer.json
 *.layer.json
 

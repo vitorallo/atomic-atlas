@@ -1,0 +1,410 @@
+[
+  {
+    "id": "AML.T0002.002",
+    "name": "AI Agent Configuration",
+    "tactics": "",
+    "description": "Adversaries may acquire publicly accessible AI agent configuration files to understand agent capabilities, gain unauthorized access to tools and data sources, or identify credentials for further attac",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0006",
+    "name": "Active Scanning",
+    "tactics": "Reconnaissance",
+    "description": "An adversary may probe or scan the victim system to gather information for targeting. This is distinct from other reconnaissance techniques that do not involve direct interaction with the victim syste",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0010.005",
+    "name": "AI Agent Tool",
+    "tactics": "",
+    "description": "Adversaries may target AI agent tools as a means to compromise a victim's AI supply chain. Tools add capabilities to AI agents, allowing them to interact with other services, connect to data sources, ",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0011.002",
+    "name": "Poisoned AI Agent Tool",
+    "tactics": "",
+    "description": "A victim may invoke a poisoned tool when interacting with their AI agent. A poisoned tool may execute an [LLM Prompt Injection](/techniques/AML.T0051) or perform [AI Agent Tool Invocation](/techniques",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0011.003",
+    "name": "Malicious Link",
+    "tactics": "",
+    "description": "An adversary may rely upon a user clicking a malicious link in order to gain execution. Users may be subjected to social engineering to get them to click on a link that will lead to code execution. Th",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0016.001",
+    "name": "Software Tools",
+    "tactics": "",
+    "description": "Adversaries may search for and obtain software tools to support their operations.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0034",
+    "name": "Cost Harvesting",
+    "tactics": "Impact",
+    "description": "Adversaries may deliberately drive a victim's AI services beyond normal operating capacity with the intent of increasing the cost of services. This may be achieved via high-volume, low-complexity quer",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0034.001",
+    "name": "Resource-Intensive Queries",
+    "tactics": "",
+    "description": "Adversaries may craft inputs specifically designed to increase the compute resources required for processing.",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0034.002",
+    "name": "Agentic Resource Consumption",
+    "tactics": "",
+    "description": "Adversaries may coerce an agentic AI system into performing computationally expensive tool calls that waste resources and consume API budgets. They may utilize [LLM Prompt Injection](/techniques/AML.T",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0046",
+    "name": "Spamming AI System with Chaff Data",
+    "tactics": "Impact",
+    "description": "Adversaries may spam the AI system with chaff data that causes increase in the number of detections.",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0053",
+    "name": "AI Agent Tool Invocation",
+    "tactics": "Execution, Privilege Escalation",
+    "description": "Adversaries may use their access to an AI agent to invoke tools the agent has access to. LLMs are often connected to other services or resources via tools to increase their capabilities. Tools may inc",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0054",
+    "name": "LLM Jailbreak",
+    "tactics": "Privilege Escalation, Defense Evasion",
+    "description": "Adversaries may induce a large language model (LLM) to ignore, circumvent, or override its safety/alignment behaviors and/or guardails to elicit outputs the model is intended to withhold. Once jailbro",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0064",
+    "name": "Gather RAG-Indexed Targets",
+    "tactics": "Reconnaissance",
+    "description": "Adversaries may identify data sources used in retrieval augmented generation (RAG) systems for targeting purposes. By pinpointing these sources, attackers can focus on poisoning or otherwise manipulat",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0066",
+    "name": "Retrieval Content Crafting",
+    "tactics": "Resource Development",
+    "description": "Adversaries may write content designed to be retrieved by user queries and influence a user of the system in some way. This abuses the trust the user has in the system.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0068",
+    "name": "LLM Prompt Obfuscation",
+    "tactics": "Defense Evasion",
+    "description": "Adversaries may hide or otherwise obfuscate prompt injections or retrieval content to avoid detection from humans, large language model (LLM) guardrails, or other detection mechanisms.",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0069.000",
+    "name": "Special Character Sets",
+    "tactics": "",
+    "description": "Adversaries may discover delimiters and special characters sets used by the large language model. For example, delimiters used in retrieval augmented generation applications to differentiate between c",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0070",
+    "name": "RAG Poisoning",
+    "tactics": "Persistence",
+    "description": "Adversaries may inject malicious content into data indexed by a retrieval augmented generation (RAG) system to contaminate a future thread through RAG-based search results. This may be accomplished by",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0071",
+    "name": "False RAG Entry Injection",
+    "tactics": "Defense Evasion",
+    "description": "Adversaries may introduce false entries into a victim's retrieval augmented generation (RAG) database. Content designed to be interpreted as a document by the large language model (LLM) used in the RA",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0075",
+    "name": "Cloud Service Discovery",
+    "tactics": "Discovery",
+    "description": "Adversaries may attempt to enumerate the cloud services running on a system after gaining access. These methods can differ from platform-as-a-service (PaaS), to infrastructure-as-a-service (IaaS), sof",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0078",
+    "name": "Drive-by Compromise",
+    "tactics": "Initial Access",
+    "description": "Adversaries may gain access to an AI system through a user visiting a website over the normal course of browsing, or an AI agent retrieving information from the web on behalf of a user. Websites can c",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0080",
+    "name": "AI Agent Context Poisoning",
+    "tactics": "Persistence",
+    "description": "Adversaries may attempt to manipulate the context used by an AI agent's large language model (LLM) to influence the responses it generates or actions it takes. This allows an adversary to persistently",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0080.000",
+    "name": "Memory",
+    "tactics": "",
+    "description": "Adversaries may manipulate the memory of a large language model (LLM) in order to persist changes to the LLM to future chat sessions. ",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0080.001",
+    "name": "Thread",
+    "tactics": "",
+    "description": "Adversaries may introduce malicious instructions into a chat thread of a large language model (LLM) to cause behavior changes which persist for the remainder of the thread. A chat thread may continue ",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0081",
+    "name": "Modify AI Agent Configuration",
+    "tactics": "Persistence, Defense Evasion",
+    "description": "Adversaries may modify the configuration files for AI agents on a system. This allows malicious changes to persist beyond the life of a single agent and affects any agents that share the configuration",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0082",
+    "name": "RAG Credential Harvesting",
+    "tactics": "Credential Access",
+    "description": "Adversaries may attempt to use their access to a large language model (LLM) on the victim's system to collect credentials. Credentials may be stored in internal documents which can inadvertently be in",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0083",
+    "name": "Credentials from AI Agent Configuration",
+    "tactics": "Credential Access",
+    "description": "Adversaries may access the credentials of other tools or services on a system from the configuration of an AI agent.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0084",
+    "name": "Discover AI Agent Configuration",
+    "tactics": "Discovery",
+    "description": "Adversaries may attempt to discover configuration information for AI agents present on the victim's system. Agent configurations can include tools or services they have access to.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0084.000",
+    "name": "Embedded Knowledge",
+    "tactics": "",
+    "description": "Adversaries may attempt to discover the data sources a particular agent can access.  The AI agent's configuration may reveal data sources or knowledge.",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0084.001",
+    "name": "Tool Definitions",
+    "tactics": "",
+    "description": "Adversaries may discover the tools the AI agent has access to. By identifying which tools are available, the adversary can understand what actions may be executed through the agent and what additional",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0084.002",
+    "name": "Activation Triggers",
+    "tactics": "",
+    "description": "Adversaries may discover keywords or other triggers (such as incoming emails, documents being added, incoming message, or other workflows) that activate an agent and may cause it to run additional act",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0084.003",
+    "name": "Call Chains",
+    "tactics": "",
+    "description": "Adversaries may extract call chains from AI agent configurations, which can reveal potentially targets for remote code execution (RCE) or other vulnerabilities. Vulnerable call chains often connect us",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0085",
+    "name": "Data from AI Services",
+    "tactics": "Collection",
+    "description": "Adversaries may use their access to a victim organization's AI-enabled services to collect proprietary or otherwise sensitive information. As organizations adopt generative AI in centralized services ",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0085.000",
+    "name": "RAG Databases",
+    "tactics": "",
+    "description": "Adversaries may prompt the AI service to retrieve data from a RAG database. This can include the majority of an organization's internal documents.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0085.001",
+    "name": "AI Agent Tools",
+    "tactics": "",
+    "description": "Adversaries may prompt the AI service to invoke various tools the agent has access to. Tools may retrieve data from different APIs or services in an organization.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0086",
+    "name": "Exfiltration via AI Agent Tool Invocation",
+    "tactics": "Exfiltration",
+    "description": "AI agent tools capable of performing write operations may be invoked to exfiltrate data to an adversary. Sensitive information can be encoded into the tool's input parameters and transmitted to an adv",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0090",
+    "name": "OS Credential Dumping",
+    "tactics": "Credential Access",
+    "description": "Adversaries may extract credentials from OS caches, application memory, or other sources on a compromised system. Credentials are often in the form of a hash or clear text, and can include usernames a",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0093",
+    "name": "Prompt Infiltration via Public-Facing Application",
+    "tactics": "Initial Access, Persistence",
+    "description": "An adversary may introduce malicious prompts into the victim's system via a public-facing application with the intention of it being ingested by an AI at some point in the future and ultimately having",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0095.000",
+    "name": "Code Repositories",
+    "tactics": "",
+    "description": "Adversaries may search public code repositories for information about a victim or victim system that can be used during targeting. Victims may store code or artifacts related to their AI systems in re",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0098",
+    "name": "AI Agent Tool Credential Harvesting",
+    "tactics": "Credential Access",
+    "description": "Adversaries may attempt to use their access to an AI agent on the victim's system to retrieve data from available agent tools to collect credentials. Agent tools may connect to a wide range of sources",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0099",
+    "name": "AI Agent Tool Data Poisoning",
+    "tactics": "Persistence",
+    "description": "Adversaries may place malicious content on a victim's system where it can be retrieved by an AI Agent Tool. This may be accomplished by placing documents in a location that will be ingested by a servi",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0100",
+    "name": "AI Agent Clickbait",
+    "tactics": "Execution",
+    "description": "Adversaries may craft deceptive web content designed to bait Computer-Using AI agents or AI web browsers into taking unintended actions, such as clicking buttons, copying code, or navigating to specif",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0101",
+    "name": "Data Destruction via AI Agent Tool Invocation",
+    "tactics": "Impact",
+    "description": "Adversaries may invoke an AI agent's tool capable of performing mutative operations to perform Data Destruction. Adversaries may destroy data and files on specific systems or in large numbers on a net",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0103",
+    "name": "Deploy AI Agent",
+    "tactics": "Execution",
+    "description": "Adversaries may launch AI agents in the victim's environment to execute actions on their behalf. AI agents may have access to a wide range of tools and data sources, as well as permissions to access a",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0104",
+    "name": "Publish Poisoned AI Agent Tool",
+    "tactics": "Resource Development",
+    "description": "Adversaries may create and publish poisoned AI agent tools. Poisoned tools may contain an [LLM Prompt Injection](/techniques/AML.T0051), which can lead to a variety of impacts.",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0105",
+    "name": "Escape to Host",
+    "tactics": "Privilege Escalation",
+    "description": "Adversaries may break out of a container or virtualized environment to gain access to the underlying host. This can allow an adversary access to other containerized or virtualized resources from the h",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0108",
+    "name": "AI Agent",
+    "tactics": "Command and Control",
+    "description": "Adversaries may abuse AI agents present on the victim's system for command and control. AI agents are often granted access to tools that can execute shell commands, reach out to the internet, and inte",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0109",
+    "name": "AI Supply Chain Rug Pull",
+    "tactics": "Defense Evasion",
+    "description": "Adversaries may publish legitimate AI components or software, gain user adoption, then push an update with a malicious variant, leading to [AI Supply Chain Compromise](/techniques/AML.T0010). More scr",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0110",
+    "name": "AI Agent Tool Poisoning",
+    "tactics": "Persistence",
+    "description": "Adversaries may achieve persistence by poisoning tools used by AI agents including built-in tools or tools available to the agent via Model Context Protocol (MCP) connections. This involves compromisi",
+    "agentic": "yes",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0111",
+    "name": "AI Supply Chain Reputation Inflation",
+    "tactics": "Defense Evasion",
+    "description": "AI Supply Chain Reputation Inflation is the process of building or leveraging genuinely credible-looking trust signals to increase the perceived legitimacy of AI supply chain components, with the goal",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0112",
+    "name": "Machine Compromise",
+    "tactics": "Impact",
+    "description": "Adversaries may compromise a machine by exploiting or manipulating AI-enabled components on the system. Compromising a victim system allows the adversary to execute arbitrary code, steal credentials, ",
+    "agentic": "probably",
+    "object_type": "technique"
+  },
+  {
+    "id": "AML.T0112.000",
+    "name": "Local AI Agent",
+    "tactics": "",
+    "description": "Adversaries may achieve full system compromise by abusing AI agents running locally on a host, such as computer-use agents or AI-driven browsers. These agents are designed to autonomously interact wit",
+    "agentic": "yes",
+    "object_type": "technique"
+  }
+]

@@ -61,13 +61,20 @@ def test_resolve_target_maps_each_adapter_vector(technique_path, vector):
     # and WebhookTarget can hold references that benefit from explicit drop.)
 
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
 @pytest.mark.skipif(not PYRIT_AVAILABLE, reason="resolve_target needs PyRIT")
 def test_unsupported_vector_raises():
-    atomic = load(ATOMICS_DIR / "AML.T0051.000/direct_chat.md")
+    """Vectors without a CLI adapter (system_prompt, web_fetch, email, etc.)
+    must raise UnsupportedVectorError with an agent-runner hint. Loaded from
+    a fixture .md file rather than constructed in code, per the project's
+    "tests are atomic markdown files" principle.
+    """
+    atomic = load(FIXTURES_DIR / "adapterless_email.md")
     with pytest.raises(UnsupportedVectorError) as exc:
         resolve_target(atomic, PROFILE)
-    assert "direct_chat" in str(exc.value)
-    # Hint should mention the agent runner since direct_chat has no adapter.
+    assert "email" in str(exc.value)
     assert "agent runner" in str(exc.value).lower() or "skill" in str(exc.value).lower() or "MCP" in str(exc.value)
 
 

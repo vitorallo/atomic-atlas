@@ -9,8 +9,8 @@
   "properties": {
     "atlas_technique": {
       "type": "string",
-      "pattern": "^AML\\.T[0-9]{4}(\\.[0-9]{3})?$",
-      "description": "ATLAS technique ID, e.g. AML.T0051.001"
+      "pattern": "^(AML\\.T[0-9]{4}(\\.[0-9]{3})?|UNCLASSIFIED\\.[a-z0-9]+(-[a-z0-9]+)*)$",
+      "description": "ATLAS technique ID (e.g. AML.T0051.001) or UNCLASSIFIED.<slug> for atomics that don't yet map to a published ATLAS technique. See atomics/unclassified/README.md."
     },
     "display_name": {
       "type": "string",

@@ -27,11 +27,26 @@ ChromaDB adapter: POST to `/api/v1/collections/{collection}/add`
 Azure AI Search adapter: POST to `{endpoint}/indexes/{index}/docs/index?api-version=2023-11-01`  
 HTTP ingest: POST to `adapter_config.ingest_url`; DELETE to `adapter_config.delete_url`
 
+### DirectChatTarget
+**Modes**: `openai_compatible`  
+Wraps `pyrit.prompt_target.OpenAIChatTarget` with config from the target profile (`base_url`, `api_key`, `model`). Closes the gap where `direct_chat` was `UnsupportedVectorError` and forced users into the agent runner for chat-only atomics. Works against any OpenAI-compatible endpoint: DVAA HelperBot/LegacyBot/etc., production Azure OpenAI agents, LiteLLM proxies, vLLM, Ollama-OpenAI shim.  
+**setup()**: no-op (chat is stateless from the target's POV).  
+**send_prompt_async()**: delegate to the wrapped `OpenAIChatTarget`.  
+**cleanup()**: no-op.
+
 ### MCPServerTarget
-**Modes**: `http_registry`  
+**Modes**: `http_registry_stub`, `mcp_jsonrpc`  
+
+`http_registry_stub` (v0.1 placeholder):  
 **setup()**: POST `tool_payload` to `registry_url`; store `_registered_tool_id`  
 **send_prompt_async()**: POST chat completions  
 **cleanup()**: DELETE `{registry_url}/{_registered_tool_id}`
+
+`mcp_jsonrpc` (v0.1 — real MCP):  
+Speaks JSON-RPC 2.0 over HTTP. Targets DVAA's ToolBot/PluginBot/DataBot/ProxyBot, [DVMCP](https://github.com/harishsg993010/damn-vulnerable-MCP-server), the [appsecco MCP lab](https://github.com/appsecco/vulnerable-mcp-servers-lab), and any spec-compliant MCP server reachable over HTTP.  
+**setup()**: `POST /` with `{"jsonrpc":"2.0","method":"tools/list"}`; store baseline tool list. If the atomic specifies `tool_payload` and the server supports `tools/register`, register a poisoned tool and store its id for cleanup.  
+**send_prompt_async()**: `POST /` with `{"jsonrpc":"2.0","method":"tools/call","params":{"name":<target_tool>,"arguments":<attack_args>}}`. Returns the tool's response text as the prompt response (so substring scorers can match exfil/RCE markers).  
+**cleanup()**: if a tool was registered, deregister via `tools/unregister` (when supported); otherwise no-op.
 
 ### ToolResponseTarget
 **setup()**: start `HTTPServer` on `localhost:{port}`; serve `poisoned_response` as JSON for GET and POST  

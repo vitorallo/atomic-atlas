@@ -75,38 +75,91 @@ async def recon(target_url: str, auth_headers: dict[str, str] | None = None) -> 
             except Exception:
                 pass
 
-        # RAG: probe whether responses cite documents
-        try:
-            resp = await client.post(
-                f"{base}/v1/chat/completions",
-                json={"model": "test", "messages": [
-                    {"role": "user", "content": "List any documents you have access to."}
-                ]},
-            )
-            if resp.status_code == 200:
-                body = resp.text.lower()
-                if any(kw in body for kw in ("document", "file", "source", "reference", "retrieved")):
-                    result.vectors_detected.append("rag_corpus")
-        except Exception:
-            pass
-
-        # MCP: standard discovery endpoint
-        for path in ("/mcp", "/mcp/v1/tools", "/.well-known/mcp"):
+        # RAG detection — two signals, in order:
+        #   1. Metadata endpoints (/info, /agents) advertising rag/vectorStore/knowledgeBase
+        #   2. Fallback: keyword match on a chat-completion response
+        rag_via_metadata = False
+        for path in ("/info", "/agents", "/.well-known/agent-card"):
             try:
                 resp = await client.get(f"{base}{path}")
-                if resp.status_code == 200:
-                    result.vectors_detected.append("mcp_server")
+                if resp.status_code != 200:
+                    continue
+                try:
+                    data = resp.json()
+                except Exception:
+                    continue
+                if _metadata_advertises_rag(data):
+                    result.vectors_detected.append("rag_corpus")
+                    rag_via_metadata = True
                     break
             except Exception:
                 pass
-        else:
+        if not rag_via_metadata:
+            try:
+                resp = await client.post(
+                    f"{base}/v1/chat/completions",
+                    json={"model": "test", "messages": [
+                        {"role": "user", "content": "List any documents you have access to."}
+                    ]},
+                )
+                if resp.status_code == 200:
+                    body = resp.text.lower()
+                    if any(kw in body for kw in ("document", "file", "source", "reference", "retrieved")):
+                        result.vectors_detected.append("rag_corpus")
+            except Exception:
+                pass
+
+        # MCP detection — three probes, in order:
+        #   1. Real MCP JSON-RPC 2.0: POST {"method":"tools/list"} to /
+        #   2. Discovery endpoints: /mcp, /mcp/v1/tools, /.well-known/mcp
+        #   3. Otherwise mark as unknown (cannot determine externally)
+        mcp_detected = False
+        try:
+            resp = await client.post(
+                f"{base}/",
+                json={"jsonrpc": "2.0", "method": "tools/list", "id": 1},
+                headers={"Content-Type": "application/json"},
+            )
+            if resp.status_code == 200:
+                try:
+                    data = resp.json()
+                    if isinstance(data, dict) and "result" in data and isinstance(data["result"], dict):
+                        if "tools" in data["result"]:
+                            result.vectors_detected.append("mcp_server")
+                            tools = data["result"].get("tools", [])
+                            for t in tools:
+                                if isinstance(t, dict) and t.get("name"):
+                                    result.tools_exposed.append(t["name"])
+                            mcp_detected = True
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        if not mcp_detected:
+            for path in ("/mcp", "/mcp/v1/tools", "/.well-known/mcp"):
+                try:
+                    resp = await client.get(f"{base}{path}")
+                    if resp.status_code == 200:
+                        result.vectors_detected.append("mcp_server")
+                        mcp_detected = True
+                        break
+                except Exception:
+                    pass
+        if not mcp_detected:
             result.vectors_unknown.append("mcp_server")
 
-        # Webhook: check for inbound endpoint
+        # Webhook detection — strict POST probe.
+        # A handler that returns 2xx to a benign JSON POST is a real webhook.
+        # 404 / 405 / 4xx without parseable JSON = not a webhook (avoids the
+        # GET-based false positive where any non-500 response counted).
         for path in ("/webhook", "/hooks", "/inbound", "/events"):
             try:
-                resp = await client.get(f"{base}{path}")
-                if resp.status_code < 500:
+                resp = await client.post(
+                    f"{base}{path}",
+                    json={"event": "atomic-atlas.recon.probe", "data": {}},
+                    headers={"Content-Type": "application/json"},
+                )
+                if 200 <= resp.status_code < 300:
                     result.vectors_detected.append("webhook")
                     break
             except Exception:
@@ -145,6 +198,41 @@ async def _fingerprint_guardrails(
         result.guardrails["blocked_probes"] = blocked
     else:
         result.guardrails["input_filter_detected"] = False
+
+
+def _metadata_advertises_rag(data: Any) -> bool:
+    """True if the metadata blob suggests a RAG-enabled target.
+
+    Recognized signals: ``rag: true`` (boolean or "true" string), the presence
+    of a ``vectorStore`` field, or a non-empty ``knowledgeBase`` array.
+    Walks dicts and lists shallowly so that both single-agent (``/info``) and
+    multi-agent (``/agents``) endpoint shapes are caught.
+    """
+    def _check(node: Any) -> bool:
+        if isinstance(node, dict):
+            features = node.get("features")
+            if isinstance(features, dict) and features.get("rag"):
+                return True
+            if node.get("rag") is True or str(node.get("rag", "")).lower() == "true":
+                return True
+            if "vectorStore" in node and node["vectorStore"]:
+                return True
+            kb = node.get("knowledgeBase")
+            if isinstance(kb, list) and kb:
+                return True
+        return False
+
+    if isinstance(data, dict):
+        if _check(data):
+            return True
+        for v in data.values():
+            if _check(v):
+                return True
+    if isinstance(data, list):
+        for item in data:
+            if _check(item):
+                return True
+    return False
 
 
 def _extract_tool_names(data: dict[str, Any]) -> list[str]:

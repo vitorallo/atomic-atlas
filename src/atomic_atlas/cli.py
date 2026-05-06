@@ -11,11 +11,17 @@ import click
 import yaml
 
 ATOMICS_DIR = Path(__file__).parent.parent.parent / "atomics"
+RUNBOOKS_DIR = Path(__file__).parent.parent.parent / "runbooks"
 
 
 @click.group()
 def cli():
     """atomic-atlas: ATLAS-keyed agentic vector tests, backed by PyRIT."""
+
+
+@cli.group(name="runbook")
+def runbook_group():
+    """Runbook commands — execute ordered atomic chains."""
 
 
 @cli.command()
@@ -201,6 +207,7 @@ def validate(atomic_path: str | None):
             p for p in ATOMICS_DIR.rglob("*.md")
             if not any(part.startswith("_") for part in p.parts)
             and "payloads" not in p.parts
+            and p.name.upper() not in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}
         ]
 
     errors = 0
@@ -260,7 +267,196 @@ def _markdown_report(results, output: str | None) -> None:
         click.echo(text)
 
 
+# ---------------------------------------------------------------------------
+# runbook subcommands
+# ---------------------------------------------------------------------------
+
+
+def _resolve_runbook(id_or_path: str):
+    from .runbook import load as _rb_load, load_all as _rb_load_all
+    p = Path(id_or_path)
+    if p.exists():
+        return _rb_load(p)
+    for rb in _rb_load_all(RUNBOOKS_DIR):
+        if rb.runbook_id == id_or_path:
+            return rb
+    raise click.BadParameter(f"Runbook not found: {id_or_path}")
+
+
+@runbook_group.command(name="list")
+@click.option("--type", "rtype", default=None, help="Filter by runbook_type (dvaa_challenge | kill_chain | engagement)")
+@click.option("--tactic", default=None, help="Filter by ATLAS tactic slug")
+@click.option("--json", "as_json", is_flag=True, default=False)
+def runbook_list(rtype: str | None, tactic: str | None, as_json: bool):
+    """List runbooks in the catalog."""
+    from .runbook import load_all
+    rbs = load_all(RUNBOOKS_DIR)
+    if rtype:
+        rbs = [r for r in rbs if r.runbook_type == rtype]
+    if tactic:
+        rbs = [r for r in rbs if tactic in r.atlas_tactics]
+    if as_json:
+        click.echo(json.dumps([{
+            "runbook_id": r.runbook_id,
+            "display_name": r.display_name,
+            "runbook_type": r.runbook_type,
+            "guid": r.guid,
+            "atlas_tactics": r.atlas_tactics,
+            "atomics_count": len(r.atomics),
+            "path": str(r.path.relative_to(RUNBOOKS_DIR.parent)),
+        } for r in rbs], indent=2))
+        return
+    if not rbs:
+        click.echo("No runbooks matched the filter.")
+        return
+    width = max(len(r.runbook_id) for r in rbs)
+    for r in rbs:
+        click.echo(
+            f"{r.runbook_id.ljust(width)}  {r.runbook_type:<16}  "
+            f"({len(r.atomics)} step) {r.display_name}"
+        )
+    click.echo(f"\n{len(rbs)} runbook(s).")
+
+
+@runbook_group.command(name="show")
+@click.argument("runbook_id_or_path")
+def runbook_show(runbook_id_or_path: str):
+    """Print a runbook with resolved atomic dependency graph."""
+    from .runbook import resolve_atomic_ref
+    rb = _resolve_runbook(runbook_id_or_path)
+    click.echo(f"# {rb.display_name}")
+    click.echo(f"id:          {rb.runbook_id}")
+    click.echo(f"type:        {rb.runbook_type}")
+    click.echo(f"guid:        {rb.guid}")
+    if rb.target_origin:
+        click.echo(f"origin:      {rb.target_origin}")
+    if rb.atlas_tactics:
+        click.echo(f"tactics:     {', '.join(rb.atlas_tactics)}")
+    click.echo(f"\nAtomic chain ({len(rb.atomics)} steps, topological order):")
+    for ref in rb.topological_order():
+        try:
+            atomic = resolve_atomic_ref(ref, ATOMICS_DIR)
+            mark = "✓"
+            label = f"{atomic.atlas_technique} / {atomic.interaction_vector}"
+        except Exception as resolve_err:
+            mark = "✗"
+            label = f"UNRESOLVABLE: {resolve_err}"
+        deps = f" depends_on={ref.depends_on}" if ref.depends_on else ""
+        click.echo(
+            f"  [{mark}] step {ref.id} on_failure={ref.on_failure}{deps}: {label}"
+        )
+    click.echo(f"\nSuccess criteria:\n  {rb.success_criteria}")
+
+
+@runbook_group.command(name="exec")
+@click.argument("runbook_id_or_path")
+@click.option("--target", required=True, help="Target agent base URL")
+@click.option("--profile", default=None, type=click.Path(exists=True), help="Target profile YAML")
+@click.option("--output", default="runbook-results.json", show_default=True)
+@click.option("--authorized", is_flag=True, default=False,
+              help="Confirm you are authorized to test this target (required)")
+def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
+                output: str, authorized: bool):
+    """Execute a runbook against TARGET."""
+    if not authorized:
+        click.echo("ERROR: --authorized flag required.", err=True)
+        sys.exit(1)
+    from .targets.base import PYRIT_AVAILABLE
+    if not PYRIT_AVAILABLE:
+        click.echo(
+            "ERROR: PyRIT is required for runbook execution but is not installed.\n"
+            "Install with: pip install 'atomic-atlas[orchestrator]'",
+            err=True,
+        )
+        sys.exit(4)
+
+    from .runbook_runner import run_runbook
+    from .runner import load_profile
+
+    rb = _resolve_runbook(runbook_id_or_path)
+    profile_data: dict = {"base_url": target, "adapters": {}}
+    if profile:
+        profile_data = load_profile(profile)
+        profile_data.setdefault("base_url", target)
+
+    click.echo(f"Running runbook {rb.runbook_id} ({len(rb.atomics)} step)…")
+    result = asyncio.run(run_runbook(rb, ATOMICS_DIR, profile_data, authorized=True))
+
+    mark = "✓" if result.chain_success else "✗"
+    click.echo(
+        f"\n{mark} chain_success={result.chain_success}  "
+        f"({result.duration_seconds:.1f}s)"
+    )
+    for sr in result.step_results:
+        if sr.skipped:
+            click.echo(f"  step {sr.step_id} SKIPPED ({sr.skip_reason})")
+            continue
+        bar = "✓" if sr.successes > 0 else "✗"
+        click.echo(
+            f"  {bar} step {sr.step_id} {sr.atlas_technique}/{sr.interaction_vector} "
+            f"{sr.successes}/{sr.total_runs} ({sr.success_rate:.0%}) "
+            f"in {sr.duration_seconds:.1f}s"
+        )
+
+    payload = {
+        "runbook_id": result.runbook_id,
+        "runbook_path": result.runbook_path,
+        "guid": result.guid,
+        "runbook_type": result.runbook_type,
+        "atlas_tactics": result.atlas_tactics,
+        "chain_success": result.chain_success,
+        "stopped_at_step": result.stopped_at_step,
+        "duration_seconds": result.duration_seconds,
+        "step_results": [vars(sr) for sr in result.step_results],
+    }
+    Path(output).write_text(json.dumps(payload, indent=2))
+    click.echo(f"Results written to {output}")
+
+
+@runbook_group.command(name="validate")
+@click.argument("runbook_path", default=None, required=False)
+def runbook_validate(runbook_path: str | None):
+    """Validate runbook frontmatter, atomic-ref resolution, and DAG shape."""
+    from .runbook import load, resolve_atomic_ref
+    if runbook_path:
+        paths = [Path(runbook_path)]
+    else:
+        paths = [
+            p for p in RUNBOOKS_DIR.rglob("*.md")
+            if not any(part.startswith("_") for part in p.parts)
+            and p.name.upper() not in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}
+        ]
+    errors = 0
+    for p in paths:
+        try:
+            rb = load(p)
+            for ref in rb.atomics:
+                resolve_atomic_ref(ref, ATOMICS_DIR)
+            rb.topological_order()
+            click.echo(f"  ✓ {p.relative_to(RUNBOOKS_DIR)}")
+        except Exception as validation_err:
+            click.echo(f"  ✗ {p}: {validation_err}", err=True)
+            errors += 1
+    if errors:
+        sys.exit(1)
+    else:
+        click.echo(f"\nAll {len(paths)} runbook(s) valid.")
+
+
+# ---------------------------------------------------------------------------
+# (back to main module body)
+# ---------------------------------------------------------------------------
+
+
 _ADAPTER_STANZAS = {
+    "direct_chat": (
+        "adapters:\n"
+        "  direct_chat:\n"
+        "    type: openai_compatible\n"
+        "    api_key: ${OPENAI_API_KEY}\n"
+        "    model: gpt-4o\n"
+        "    # endpoint: optional override; defaults to {base_url}/v1/chat/completions\n"
+    ),
     "rag_corpus": (
         "adapters:\n"
         "  rag_corpus:\n"
@@ -271,11 +467,16 @@ _ADAPTER_STANZAS = {
     "mcp_server": (
         "adapters:\n"
         "  mcp_server:\n"
-        "    type: http_registry_stub   # v0.1 placeholder — see SPEC.md\n"
+        "    # Mode A — v0.1 placeholder (no real MCP HTTP registration spec):\n"
+        "    type: http_registry_stub\n"
         "    registry_url: http://localhost:9000/mcp/tools\n"
-        "    auth:\n"
-        "      type: bearer\n"
-        "      token: ${MCP_TOKEN}\n"
+        "    auth: { type: bearer, token: ${MCP_TOKEN} }\n"
+        "    # Mode B — real MCP JSON-RPC 2.0 over HTTP (e.g. DVAA ToolBot):\n"
+        "    # type: mcp_jsonrpc\n"
+        "    # base_url: http://localhost:7010\n"
+        "    # target_tool: read_file\n"
+        "    # tool_arguments: { path: /etc/passwd }\n"
+        "    # register_tool: { name: ComplianceLogger, description: ..., inputSchema: {} }\n"
     ),
     "tool_response": (
         "adapters:\n"

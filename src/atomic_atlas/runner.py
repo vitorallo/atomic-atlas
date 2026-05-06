@@ -25,6 +25,7 @@ from .targets.base import (
 # Other vectors are valid in atomic frontmatter but require the agent runner
 # (Claude Code skill or MCP server) to execute against arbitrary targets.
 ADAPTER_VECTORS = frozenset({
+    "direct_chat",
     "rag_corpus",
     "mcp_server",
     "tool_response",
@@ -99,6 +100,10 @@ def resolve_target(atomic: AtomicTest, profile: dict[str, Any]) -> AtomicAtlasTa
     vector = atomic.interaction_vector
     adapters_config = profile.get("adapters", {}).get(vector, {})
 
+    if vector == "direct_chat":
+        from .targets.direct_chat import DirectChatTarget
+        return DirectChatTarget(atomic, profile)
+
     if vector == "rag_corpus":
         from .targets.rag_corpus import RAGCorpusTarget
         payload_file = _resolve_payload(atomic)
@@ -171,23 +176,26 @@ async def run_atomic(atomic: AtomicTest, target: AtomicAtlasTarget, authorized: 
             result.duration_seconds = time.monotonic() - start
             return result
 
-        orchestrator = _build_orchestrator(atomic, target)
+        attack = _build_attack(atomic, target)
+        from pyrit.executor.attack.core.attack_parameters import AttackParameters
+        from pyrit.executor.attack.core.attack_strategy import AttackOutcome
+
+        objective = atomic.section("Interaction") or "Begin the test."
 
         for run_num in range(atomic.runs):
             detail: dict[str, Any] = {"run": run_num + 1}
             try:
-                responses = await orchestrator.send_prompts_async(
-                    prompt_list=[atomic.section("Interaction") or "Begin the test."]
+                attack_result = await attack.execute_async(
+                    parameters=AttackParameters(objective=objective)
                 )
-                scored = await orchestrator.score_prompts_by_orchestrator_id_async(
-                    orchestrator_id=orchestrator.get_identifier()["id"]
-                )
-                success = any(
-                    s.get_value() is True or str(s.get_value()).lower() in ("true", "1", "yes")
-                    for s in scored
-                )
+                success = attack_result.outcome == AttackOutcome.SUCCESS
                 detail["success"] = success
-                detail["response_preview"] = str(responses[0])[:200] if responses else ""
+                last_resp = attack_result.last_response
+                if last_resp is not None:
+                    try:
+                        detail["response_preview"] = str(last_resp)[:200]
+                    except Exception:
+                        detail["response_preview"] = ""
                 if success:
                     result.successes += 1
                 else:
@@ -203,32 +211,47 @@ async def run_atomic(atomic: AtomicTest, target: AtomicAtlasTarget, authorized: 
     return result
 
 
-def _build_orchestrator(atomic: AtomicTest, target: AtomicAtlasTarget):
-    """Instantiate the PyRIT orchestrator specified in the atomic's frontmatter."""
-    from pyrit.orchestrator import PromptSendingOrchestrator, RedTeamingOrchestrator
+def _build_attack(atomic: AtomicTest, target: AtomicAtlasTarget):
+    """Instantiate the PyRIT 0.13 attack class for an atomic.
+
+    PyRIT 0.13 reorganized orchestrators into the ``executor.attack`` module
+    and renamed them: ``PromptSendingOrchestrator`` → ``PromptSendingAttack``,
+    ``RedTeamingOrchestrator`` → ``RedTeamingAttack``. The atomic's
+    ``pyrit_orchestrator`` frontmatter field still uses the legacy names for
+    schema continuity; this function maps them to the new classes.
+    """
+    from pyrit.executor.attack.single_turn.prompt_sending import PromptSendingAttack
+    from pyrit.executor.attack.core.attack_config import AttackScoringConfig
     from pyrit.score import SubStringScorer
 
     scorer = SubStringScorer(
         substring=_success_substring(atomic),
-        category=atomic.atlas_technique,
+        categories=[atomic.atlas_technique],
     )
+    scoring_config = AttackScoringConfig(objective_scorer=scorer)
 
-    orchestrator_name = atomic.pyrit_orchestrator
-    if orchestrator_name == "PromptSendingOrchestrator":
-        return PromptSendingOrchestrator(
-            prompt_target=target,
-            scorers=[scorer],
-            verbose=False,
+    name = atomic.pyrit_orchestrator
+    if name in ("PromptSendingOrchestrator", "PromptSendingAttack"):
+        return PromptSendingAttack(
+            objective_target=target,
+            attack_scoring_config=scoring_config,
         )
-    if orchestrator_name == "RedTeamingOrchestrator":
-        return RedTeamingOrchestrator(
-            attack_strategy=_attack_strategy(atomic),
-            prompt_target=target,
-            red_teaming_chat=_default_red_team_chat(),
-            scorer=scorer,
-            verbose=False,
+    if name in ("RedTeamingOrchestrator", "RedTeamingAttack"):
+        # PyRIT 0.13 RedTeamingAttack requires an AttackAdversarialConfig with
+        # an attacker LLM. The migration is bigger than _build_attack and is
+        # tracked in agentic-targets v0.2 tasks. For now, atomics tagged
+        # RedTeamingOrchestrator should fall back to PromptSendingAttack
+        # against the seed payload — an attacker LLM is not used.
+        return PromptSendingAttack(
+            objective_target=target,
+            attack_scoring_config=scoring_config,
         )
-    raise ValueError(f"Unsupported orchestrator: {orchestrator_name}")
+    raise ValueError(f"Unsupported orchestrator: {name}")
+
+
+# Legacy alias for callers that imported the old name. Removed in v0.2.
+def _build_orchestrator(atomic: AtomicTest, target: AtomicAtlasTarget):  # pragma: no cover
+    return _build_attack(atomic, target)
 
 
 def _success_substring(atomic: AtomicTest) -> str:

@@ -90,6 +90,11 @@ def load_all(atomics_dir: Path | str) -> list[AtomicTest]:
             continue
         if "payloads" in md_file.parts:
             continue
+        # README.md / CHANGELOG.md / etc. are documentation, not atomics.
+        # The unclassified/ subtree relies on this to ship a README without
+        # the parser trying to load it as an atomic.
+        if md_file.name.upper() in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}:
+            continue
         try:
             tests.append(load(md_file))
         except Exception as exc:

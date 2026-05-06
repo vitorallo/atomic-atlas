@@ -67,13 +67,14 @@ class ToolResponseTarget(AtomicAtlasTarget):
             self._server.shutdown()
             self._server = None
 
-    async def send_prompt_async(self, *, prompt_request):
+    async def send_prompt_async(self, *, message):
         from pyrit.models import construct_response_from_request
-        message = prompt_request.request_pieces[0].converted_value
+        request_piece = message.message_pieces[0]
+        user_text = request_piece.converted_value
         headers = {"Content-Type": "application/json", **self._auth_headers()}
         body = {
             "model": self._adapter_config.get("model", "default"),
-            "messages": [{"role": "user", "content": message}],
+            "messages": [{"role": "user", "content": user_text}],
         }
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(self._chat_url, json=body, headers=headers)
@@ -81,4 +82,4 @@ class ToolResponseTarget(AtomicAtlasTarget):
             data = resp.json()
 
         reply = data["choices"][0]["message"]["content"]
-        return construct_response_from_request(request=prompt_request, response_text_pieces=[reply])
+        return [construct_response_from_request(request=request_piece, response_text_pieces=[reply])]

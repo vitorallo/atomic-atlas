@@ -1,0 +1,16 @@
+{
+  "_comment": "Seed for AML.T0108 / a2a_message. The shape of an A2A C2 loop: paired peers, victim-as-relay, recurring iterations.",
+  "topology": {
+    "inbound_peer": "<peer that sends instructions to the victim>",
+    "victim": "<the relay agent with privilege the attacker wants>",
+    "outbound_peer": "<peer that receives the victim's downstream calls>"
+  },
+  "loop_shape": [
+    "1. inbound_peer -> victim: message with directive",
+    "2. victim processes, calls outbound (A2A or other)",
+    "3. outbound_peer captures state",
+    "4. inbound_peer sends next directive informed by step 3"
+  ],
+  "recurrence": "minimum two full iterations; production C2 typically runs hundreds",
+  "diagnostic": "Aggregating A2A traffic over time reveals the inbound-outbound pairing per peer-set. Individual messages do not."
+}

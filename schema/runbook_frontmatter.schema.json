@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/atomic-atlas/atomic-atlas/schema/runbook_frontmatter.schema.json",
+  "title": "Atomic-Atlas runbook frontmatter",
+  "description": "YAML frontmatter schema for an atomic-atlas runbook (ordered chain of atomics)",
+  "type": "object",
+  "required": ["runbook_id", "display_name", "runbook_type", "guid", "atomics", "success_criteria"],
+  "additionalProperties": false,
+  "properties": {
+    "runbook_id": {
+      "type": "string",
+      "pattern": "^RB-[A-Z0-9][A-Z0-9-]*$",
+      "description": "Stable runbook ID, e.g. RB-DVAA-L1-01"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runbook_type": {
+      "type": "string",
+      "enum": ["dvaa_challenge", "kill_chain", "engagement"]
+    },
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "target_origin": {
+      "type": "string",
+      "description": "Optional reference to the source of this runbook (e.g., dvaa-L1-01)"
+    },
+    "atlas_tactics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "reconnaissance",
+          "resource_development",
+          "initial_access",
+          "ml_model_access",
+          "execution",
+          "persistence",
+          "privilege_escalation",
+          "defense_evasion",
+          "credential_access",
+          "discovery",
+          "collection",
+          "command_and_control",
+          "ml_attack_staging",
+          "exfiltration",
+          "impact"
+        ]
+      },
+      "description": "ATLAS tactic slugs traversed by this chain"
+    },
+    "atomics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "on_failure"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Local step id, used by depends_on and parallel_with"
+          },
+          "technique": {
+            "type": "string",
+            "pattern": "^(AML\\.T[0-9]{4}(\\.[0-9]{3})?|UNCLASSIFIED\\.[a-z0-9]+(-[a-z0-9]+)*)$",
+            "description": "ATLAS technique ID; resolved with vector to find the atomic"
+          },
+          "vector": {
+            "type": "string",
+            "enum": [
+              "direct_chat",
+              "system_prompt",
+              "rag_corpus",
+              "document_upload",
+              "tool_response",
+              "mcp_server",
+              "web_fetch",
+              "webhook",
+              "email",
+              "a2a_message",
+              "computer_use",
+              "model_api"
+            ]
+          },
+          "atomic_path": {
+            "type": "string",
+            "description": "Optional explicit path to atomic .md file; overrides technique+vector lookup"
+          },
+          "atomic_guid": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "description": "Optional rename-stable atomic ref by GUID"
+          },
+          "runs": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Override the atomic's default runs for this step"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+            "description": "Step ids that must complete before this step runs"
+          },
+          "parallel_with": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+            "description": "Step ids that can run concurrently (v0.3 — schema-only in v0.2)"
+          },
+          "on_failure": {
+            "type": "string",
+            "enum": ["stop", "continue", "retry"],
+            "description": "Policy when this step's atomic has zero successful runs"
+          },
+          "retry_max": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Only meaningful with on_failure=retry"
+          }
+        }
+      }
+    },
+    "success_criteria": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Engagement-level success rule; chain-level not step-level"
+    }
+  }
+}

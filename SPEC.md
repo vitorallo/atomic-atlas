@@ -160,6 +160,17 @@ Supported auth schemes:
 
 ---
 
+## Atomics without an ATLAS technique: `unclassified/`
+
+The `atlas_technique` field accepts two forms:
+
+1. **`AML.TXXXX[.SUB]`** — a real MITRE ATLAS technique ID. The parent directory MUST match (`atomics/AML.T0051.001/rag_corpus.md`).
+2. **`UNCLASSIFIED.<slug>`** — for attack patterns with no current ATLAS technique. The atomic lives under `atomics/unclassified/<slug>/<vector>.md`. When ATLAS publishes a matching technique, the atomic moves to `AML.TXXXX/` (`guid` stays stable).
+
+See `atomics/unclassified/README.md` for the convention and the move-when-ATLAS-catches-up workflow.
+
+The JSON Schema enforces the pattern `^(AML\.T[0-9]{4}(\.[0-9]{3})?|UNCLASSIFIED\.[a-z0-9]+(-[a-z0-9]+)*)$`.
+
 ## Design principles
 
 - **Intent over implementation.** The `.md` file describes what the attack does and how to recognize success. The runner figures out how to execute it against the specific target.

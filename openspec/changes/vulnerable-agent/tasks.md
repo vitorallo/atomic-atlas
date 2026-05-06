@@ -41,8 +41,14 @@ Each task is "wire the vulnerability described in specs.md, tag the site with `#
 - [ ] T0110 — Tool Poisoning — **new atomic** required
 - [ ] T0111 — Instruction Manipulation — **new atomic** required
 - [ ] T0112 — Resource Exhaustion — **new atomic** required
-- [ ] T0113 — Scope Violation — **new atomic** required
-- [ ] T0114 — Authorization Bypass — **new atomic** required
+- [ ] UNCLASSIFIED.scope-violation — was phantom T0113; **new atomic** required under `atomics/unclassified/scope-violation/`
+- [ ] UNCLASSIFIED.authorization-bypass — was phantom T0114; **new atomic** required under `atomics/unclassified/authorization-bypass/`
+- [ ] T0070 — RAG Poisoning (Persistence) — re-tag the existing `atomics/AML.T0051.001/rag_corpus.md` site (or add a Persistence-tactic atomic)
+- [ ] T0080 — AI Agent Context Poisoning — re-frame the existing T0109 Context Poisoning atomic and add the v5.6.0 ID
+- [ ] T0080.000 — Memory Poisoning — pairs with T0096
+- [ ] T0083 — Credentials from AI Agent Configuration — re-frame the system_prompt cred site (also tagged T0098)
+- [ ] T0084.001 — Discover AI Agent Tool Definitions — pairs with T0110 Tool Poisoning
+- [ ] T0108 — AI Agent (as C2) — re-frame T0086 outbound-tool site for the C2 framing
 
 ### Verification
 

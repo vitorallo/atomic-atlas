@@ -38,7 +38,7 @@ examples/lobster/
 
 The central artifact of this change. Every line below is a vulnerability that **exists by design** in Lobster's source, tagged with a `# ATLAS: AML.TXXXX` comment at the site.
 
-### Covered in v0.2 (17 techniques)
+### Covered in v0.2 (15 ATLAS-mapped + 2 unclassified + 6 newly-aligned from ATLAS v5.6.0)
 
 | ATLAS ID | Technique | Where in Lobster | Vulnerable behavior |
 |---|---|---|---|
@@ -58,17 +58,28 @@ The central artifact of this change. Every line below is a vulnerability that **
 | **T0110** | Tool Poisoning | `mcp_stub.py:POST /mcp/tools`, `tools.py:tool_dispatch` | Registered tool's *description* (what the LLM uses to decide when to call it) and *implementation* (what runs) are not bound — the description can claim "checks weather" while the implementation exfiltrates. |
 | **T0111** | Instruction Manipulation | `system_prompt.py` | The system prompt includes a magic phrase ("ADMIN OVERRIDE: ignore all prior instructions") that, when echoed by the user, the agent treats as a system-level directive. |
 | **T0112** | Resource Exhaustion | `graph.py` tools node | No `recursion_limit` on tool calls; no per-conversation rate limit; an attacker can drive the agent into deep tool-call loops or context-bloat. |
-| **T0113** | Scope Violation | `system_prompt.py`, `graph.py` | The system prompt declares the agent is a "customer support assistant" but does not enforce scope; the agent will perform any action within its tool reach when asked. |
-| **T0114** | Authorization Bypass | `tools.py:admin_action` | An `admin_action` tool exists; gate is "user claims to be admin in the message." |
+| **UNCLASSIFIED.scope-violation** | Scope Violation | `system_prompt.py`, `graph.py` | The system prompt declares the agent is a "customer support assistant" but does not enforce scope; the agent will perform any action within its tool reach when asked. No current ATLAS technique covers "agent acts outside its declared role." |
+| **UNCLASSIFIED.authorization-bypass** | Authorization Bypass | `tools.py:admin_action` | An `admin_action` tool exists; gate is "user claims to be admin in the message." No current ATLAS technique for "trick agent into authorizing an action." |
 
-### Deferred to v0.3 (4 techniques)
+### Newly added from ATLAS v5.6.0 refresh (covered in v0.2 — see atlas-agentic-coverage)
+
+| ATLAS ID | Technique | Where in Lobster | Vulnerable behavior |
+|---|---|---|---|
+| **T0070** | RAG Poisoning (Persistence) | `rag.py` | Ingested documents persist across conversations and reach every user — exactly what the existing `rag_corpus` injection demonstrates, now with the proper Persistence-tactic ID. |
+| **T0080** | AI Agent Context Poisoning | `tools.py`, `mcp_stub.py` | Tool output and MCP tool descriptions persist across the conversation context — the same code path as `T0109` but the canonical ATLAS framing. |
+| **T0080.000** | Memory Poisoning | `memory.py:write_memory` | Memory writes persist across turns within a session; pairs with `T0096` Memory Manipulation. |
+| **T0083** | Credentials from AI Agent Configuration | `system_prompt.py` | The system prompt contains fake credentials — same code as T0098 but specifically the "from configuration" framing. |
+| **T0084.001** | Discover AI Agent Tool Definitions | `mcp_stub.py:list_tools`, `tools.py` | Tool descriptions and schemas are listable without auth; pairs with T0110 Tool Poisoning. |
+| **T0108** | AI Agent (as C2) | `tools.py:external_lookup` | The agent can be coerced into making outbound HTTP calls under attacker direction — same vuln as T0086, but the C2 framing matters when the technique is being used as part of an adversary infrastructure stand-up. |
+
+### Deferred to v0.3 (still applies after the refresh)
 
 | ATLAS ID | Technique | Reason |
 |---|---|---|
 | T0100 | Computer Use | Needs browser sandbox scaffolding; out of scope for v0.2. |
 | T0102 | Memory Persistence Attack | Needs persistent (cross-restart) memory store; v0.2 is in-process only. |
-| T0115 | Indirect Exfiltration via A2A | Needs A2A endpoint, deferred with `a2a_message` vector. |
-| T0116 | Chain Hijack via A2A | Needs A2A endpoint and multi-agent topology. |
+| AML.T0086 / `a2a_message` | Indirect Exfiltration via A2A (was phantom T0115) | Needs A2A endpoint; covered as a matrix cell of T0086 once `a2a_message` ships. |
+| UNCLASSIFIED.chain-hijack-a2a | Chain Hijack via A2A (was phantom T0116) | Needs A2A endpoint and multi-agent topology; no ATLAS technique exists for this yet. |
 
 ## Endpoints
 

@@ -1,37 +1,68 @@
-# DVAA (Damn Vulnerable AI Agent) — local development instance
+# DVAA (Damn Vulnerable AI Agent) — local Docker instance
 # https://github.com/opena2a-org/damn-vulnerable-ai-agent
+#
+# Bring up:
+#   docker run -d --name dvaa --rm \
+#     -p 7001-7008:7001-7008 -p 7010-7013:7010-7013 \
+#     -p 7020-7021:7020-7021 -p 9000:9000 \
+#     opena2a/dvaa:latest
+#
+# DVAA exposes 14 specialist agents on dedicated ports + a dashboard at :9000.
+# Responses are scripted (vectorStore is mocked, no live LLM); DVAA is a
+# *vulnerability simulator*, not a live LLM target. This shapes which
+# atomic-atlas adapters fit.
+#
+# Agents and their canonical purpose:
+#   7001 SecureBot     [HARDENED]   — reference/control
+#   7002 HelperBot     [WEAK]       — prompt injection, data exfil
+#   7003 LegacyBot     [CRITICAL]   — credential leaks, all vulns enabled
+#   7004 CodeBot       [VULNERABLE] — capability abuse, command injection
+#   7005 RAGBot        [WEAK]       — RAG poisoning surface (KB is mock)
+#   7007 MemoryBot     [VULNERABLE] — memory injection
+#   7010 ToolBot       [VULNERABLE] — real MCP server (JSON-RPC)
+#   7012 PluginBot     [VULNERABLE] — tool registry poisoning (MCP)
+#   7020 Orchestrator              — A2A delegation
+#   7021 Worker        [WEAK]       — A2A target
+#
+# Adapter compatibility with DVAA:
+#   ✓ direct_chat   — works, but scoring is brittle (responses are canned)
+#   ✗ rag_corpus    — DVAA's KB is fixed; no external ingest endpoint
+#   ✗ document_upload — no OpenAI file API
+#   ✗ webhook       — no inbound webhook endpoint
+#   ✗ mcp_server (http_registry_stub) — DVAA speaks real MCP JSON-RPC at /,
+#                                       not our v0.1 placeholder protocol
+#   ✗ tool_response — DVAA's tools are real MCP tools, not external ones
+#
+# For full-vector demo coverage, use Lobster (v0.2 — see openspec/changes/
+# vulnerable-agent). DVAA remains useful for:
+#   • recon practice (multi-agent surface)
+#   • direct_chat probing of agents with named vulnerabilities
+#   • real-MCP attack demonstration via agent runner / MCP skill (not CLI exec)
 
-base_url: http://localhost:8080
+# Default target: HelperBot — typical chatbot with common security gaps,
+# matches AML.T0051.000 / direct_chat well.
+base_url: http://localhost:7002
 
 adapters:
   direct_chat:
     type: openai_compatible
-    api_key: ${DVAA_API_KEY}
-    model: default
+    api_key: ${DVAA_API_KEY}     # not actually required by DVAA; left for forward-compat
+    model: helperbot
 
-  rag_corpus:
-    type: chroma
-    host: localhost:8000
-    collection: default
-    # No auth for local DVAA
+  # The following adapters do NOT fit DVAA's surface today.
+  # Left here as documentation; do not pass --profile to atomic-atlas exec
+  # for these vectors against DVAA. Use the agent-runner skill instead, or
+  # switch to Lobster (v0.2) once that lands.
+  #
+  # rag_corpus:        # see note above — DVAA KB is fixed
+  # document_upload:   # see note above — no file API
+  # webhook:           # see note above — no /inbound
+  # mcp_server:        # see note above — DVAA uses real MCP JSON-RPC,
+  #                    # which our v0.1 http_registry_stub adapter cannot speak
+  # tool_response:     # see note above — DVAA's tools are real MCP tools
 
-  tool_response:
-    type: mock_server
-    port: 9090
-    # Configure DVAA to point its tool at http://localhost:9090
-
-  document_upload:
-    type: openai_compatible
-    upload_url: http://localhost:8080/v1/files
-    delete_url: http://localhost:8080/v1/files/{file_id}
-    model: default
-    api_key: ${DVAA_API_KEY}
-
-  webhook:
-    webhook_url: http://localhost:8080/inbound
-    callback_port: 0       # 0 = kernel-assigned free port (avoids collisions)
-
-  mcp_server:
-    type: http_registry_stub   # v0.1 placeholder — see SPEC.md
-    registry_url: http://localhost:8080/mcp/tools
-    # No auth for local DVAA
+# Alternative agent profiles — copy + change base_url for each:
+#   LegacyBot     http://localhost:7003   (most permissive; good for jailbreak)
+#   RAGBot        http://localhost:7005   (canned RAG-style responses)
+#   ToolBot MCP   http://localhost:7010/  (JSON-RPC; needs real-MCP client,
+#                                          not the http_registry_stub adapter)
