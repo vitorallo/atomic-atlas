@@ -1,0 +1,169 @@
+# Atomic-Atlas Format Specification v0.1
+
+## What is an atomic?
+
+An atomic is a single, self-contained adversarial test mapped to one MITRE ATLAS technique and one entry vector. It describes:
+
+- **What** the attack does (technique)
+- **Where** untrusted input enters the agent (interaction vector)
+- **How** to set up, execute, and clean up the test
+- **What success looks like** — in plain prose, not pseudocode
+
+One `.md` file per `(technique × vector)` cell. The file path encodes both dimensions:
+
+```
+atomics/AML.T0051.001/rag_corpus.md
+         ↑ technique    ↑ vector
+```
+
+---
+
+## File naming
+
+- Directory: ATLAS technique ID (e.g. `AML.T0051.001`)
+- Filename: interaction vector slug (see [Vectors](#vectors))
+- Payloads: `payloads/` subdirectory inside the technique directory
+
+---
+
+## Frontmatter (required)
+
+Every atomic begins with a YAML frontmatter block validated against `schema/atomic_frontmatter.schema.json`.
+
+```yaml
+---
+atlas_technique: AML.T0051.001          # REQUIRED: ATLAS technique ID
+display_name: Indirect Prompt Injection  # REQUIRED: human-readable name
+interaction_vector: rag_corpus           # REQUIRED: from the vector enum below
+guid: <uuid4>                            # REQUIRED: stable identifier, generate once
+runs: 5                                  # OPTIONAL: default 5
+target_requires:                         # OPTIONAL: capabilities the target must expose
+  - capability: rag_retrieval
+  - capability: outbound_http_tool
+pyrit_orchestrator: RedTeamingOrchestrator  # OPTIONAL: default PromptSendingOrchestrator
+pyrit_scorer: SubStringScorer               # OPTIONAL: default SubStringScorer
+---
+```
+
+All credential and connection details belong in target profiles (`targets/*.yaml`), not here.
+
+---
+
+## Vectors
+
+Allowed values for `interaction_vector`:
+
+| Slug | Description |
+|---|---|
+| `direct_chat` | Authenticated user message to the agent's chat interface |
+| `system_prompt` | Modification of the agent's system prompt or configuration |
+| `rag_corpus` | Document injected into the agent's retrieval corpus |
+| `document_upload` | File submitted directly to the agent (upload, attachment) |
+| `tool_response` | Poisoned response returned by a tool the agent called |
+| `mcp_server` | Tool registered on an MCP server the agent connects to |
+| `web_fetch` | Content on a webpage the agent browses or fetches |
+| `webhook` | Payload delivered via a webhook or inbound integration event |
+| `email` | Email body or attachment that triggers agent processing |
+| `a2a_message` | Message sent from one agent to another |
+| `computer_use` | Content injected into a screen or OS dialog the agent can see |
+| `model_api` | Direct interaction with the model's inference API |
+
+---
+
+## Body sections
+
+The markdown body uses H2 headings as structured fields. All sections are optional but **Why this matters**, **Prerequisites**, **Interaction**, and **Success criteria** are strongly recommended.
+
+### `## Why this matters`
+
+Plain-prose explanation of the threat. Write for a keynote audience — one or two sentences that would land with a CISO. No bullet lists.
+
+### `## Prerequisites`
+
+Bullet list of what must be true before the test can run:
+- Attacker-side capabilities (write access, network path, etc.)
+- Target-side capabilities (tool availability, RAG exposure, etc.)
+
+### `## Attack strategy`
+
+How the attack is executed. Reference the PyRIT orchestrator and any seed payload file. Describe what the attacker LLM (RedTeamingOrchestrator) is instructed to achieve.
+
+### `## Interaction`
+
+Numbered sequence of steps:
+1. Setup actions (inject, register, configure)
+2. Trigger interactions sent to the agent
+3. Observation steps (monitor callback, check tool call log)
+
+### `## Success criteria`
+
+Plain-prose description of what constitutes a successful test. The runner uses this field for the LLM judge scorer; a deterministic scorer may also be configured via frontmatter.
+
+### `## ATLAS mitigations`
+
+Bulleted list of ATLAS mitigation IDs and names that address this technique × vector combination.
+
+### `## Cleanup`
+
+Bulleted list of state that must be restored: remove injected documents, deregister tools, stop mock servers.
+
+---
+
+## Payload files
+
+Payload files live in `atomics/<technique>/payloads/`. They are referenced by filename in the `## Attack strategy` section. Payload files are seed inputs — PyRIT's RedTeamingOrchestrator will generate and mutate variants at runtime.
+
+Payload filenames should be descriptive: `poisoned_rag_callback.md`, `mcp_tool_description_poison.json`.
+
+---
+
+## Target profiles
+
+Target profiles live in `targets/*.yaml`. They specify the target's entry point and adapter configuration per vector. Credentials are always referenced as environment variables (`${VAR_NAME}`), never hardcoded.
+
+```yaml
+# targets/dvaa_local.yaml
+base_url: http://localhost:8080
+adapters:
+  rag_corpus:
+    type: chroma
+    host: localhost:8000
+    collection: default
+  tool_response:
+    type: mock_server
+    port: 9090
+  direct_chat:
+    type: openai_compatible
+    api_key: ${DVAA_API_KEY}
+```
+
+Supported adapter types per vector: see `src/atomic_atlas/targets/` for available implementations.
+
+Supported auth schemes:
+- `api_key: ${ENV_VAR}` — API key from environment
+- `bearer_token: ${ENV_VAR}` — Bearer token
+- `azure_default_credential: true` — Azure DefaultAzureCredential (for Azure AI Search, Azure OpenAI)
+- `hmac_secret: ${ENV_VAR}` — HMAC signing for webhooks
+- `basic: {user: ..., password: ${ENV_VAR}}` — Basic auth
+
+---
+
+## Contributing an atomic
+
+1. Pick an ATLAS technique + vector combination not yet covered (check the coverage matrix: `atomic-atlas report --format coverage`)
+2. Copy the template: `cp atomics/_TEMPLATE/vector_template.md atomics/AML.TXXXX/your_vector.md`
+3. Fill in the frontmatter — generate a fresh UUID4 for `guid`
+4. Write the body sections
+5. Add any payload seed files to `payloads/`
+6. Run `atomic-atlas validate atomics/AML.TXXXX/your_vector.md` to check frontmatter
+7. Open a PR — one atomic per PR
+
+---
+
+## Design principles
+
+- **Intent over implementation.** The `.md` file describes what the attack does and how to recognize success. The runner figures out how to execute it against the specific target.
+- **Credentials never in atomics.** Atomic files may be shared publicly. All secrets belong in target profiles, loaded from environment variables.
+- **Runs, not pass/fail.** An atomic reports a success rate over N runs, not a binary result. LLMs are non-deterministic; coverage claims should reflect that.
+- **Authorization is mandatory.** The runner requires an explicit `--authorized` flag per target execution. Running atomics against systems you do not have authorization to test is unethical and likely illegal.
+- **PyRIT is an optional runtime dependency.** The base install (`pip install atomic-atlas`) supports `list`, `recon`, `report`, `validate`, and the MCP server stub — none of which require PyRIT. Only `atomic-atlas exec` needs PyRIT, which is installed via the `[orchestrator]` extra: `pip install 'atomic-atlas[orchestrator]'`. This keeps atomic authoring and the agent-runner layer lightweight; PyRIT and its transitive deps are pulled in only when actually executing tests.

@@ -1,0 +1,37 @@
+# DVAA (Damn Vulnerable AI Agent) — local development instance
+# https://github.com/opena2a-org/damn-vulnerable-ai-agent
+
+base_url: http://localhost:8080
+
+adapters:
+  direct_chat:
+    type: openai_compatible
+    api_key: ${DVAA_API_KEY}
+    model: default
+
+  rag_corpus:
+    type: chroma
+    host: localhost:8000
+    collection: default
+    # No auth for local DVAA
+
+  tool_response:
+    type: mock_server
+    port: 9090
+    # Configure DVAA to point its tool at http://localhost:9090
+
+  document_upload:
+    type: openai_compatible
+    upload_url: http://localhost:8080/v1/files
+    delete_url: http://localhost:8080/v1/files/{file_id}
+    model: default
+    api_key: ${DVAA_API_KEY}
+
+  webhook:
+    webhook_url: http://localhost:8080/inbound
+    callback_port: 0       # 0 = kernel-assigned free port (avoids collisions)
+
+  mcp_server:
+    type: http_registry_stub   # v0.1 placeholder — see SPEC.md
+    registry_url: http://localhost:8080/mcp/tools
+    # No auth for local DVAA

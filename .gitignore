@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+wheels/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & tooling caches
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Type-checker / IDE
+.pyre/
+.pytype/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+
+# atomic-atlas runtime artifacts
+results.json
+*.results.json
+layer.json
+*.layer.json
+
+# PyRIT memory (default DB path written by SQLiteMemory when not :memory:)
+pyrit.db
+*.db
+*.duckdb
+
+# Claude Code / agent assistant workspace state — not project source.
+.claude/
+CLAUDE.md
+.claude-context/

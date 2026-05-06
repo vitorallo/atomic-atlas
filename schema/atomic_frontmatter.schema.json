@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/atomic-atlas/atomic-atlas/schema/atomic_frontmatter.schema.json",
+  "title": "Atomic-Atlas frontmatter",
+  "description": "YAML frontmatter schema for an atomic-atlas test file",
+  "type": "object",
+  "required": ["atlas_technique", "display_name", "interaction_vector", "guid"],
+  "additionalProperties": false,
+  "properties": {
+    "atlas_technique": {
+      "type": "string",
+      "pattern": "^AML\\.T[0-9]{4}(\\.[0-9]{3})?$",
+      "description": "ATLAS technique ID, e.g. AML.T0051.001"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable technique name"
+    },
+    "interaction_vector": {
+      "type": "string",
+      "enum": [
+        "direct_chat",
+        "system_prompt",
+        "rag_corpus",
+        "document_upload",
+        "tool_response",
+        "mcp_server",
+        "web_fetch",
+        "webhook",
+        "email",
+        "a2a_message",
+        "computer_use",
+        "model_api"
+      ],
+      "description": "Entry vector through which untrusted input reaches the agent"
+    },
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "Stable UUID4 identifier for this atomic"
+    },
+    "runs": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "default": 5,
+      "description": "Number of times to run this atomic (LLMs are non-deterministic)"
+    },
+    "target_requires": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["capability"],
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "type": "string",
+            "description": "A capability the target must expose for this atomic to apply"
+          }
+        }
+      },
+      "description": "Capabilities the target must expose for this atomic to be applicable"
+    },
+    "pyrit_orchestrator": {
+      "type": "string",
+      "enum": [
+        "PromptSendingOrchestrator",
+        "RedTeamingOrchestrator",
+        "MultiTurnOrchestrator",
+        "CrescendoOrchestrator"
+      ],
+      "default": "PromptSendingOrchestrator",
+      "description": "PyRIT orchestrator to use for this atomic"
+    },
+    "pyrit_scorer": {
+      "type": "string",
+      "description": "PyRIT scorer class name to use for success evaluation",
+      "default": "SubStringScorer"
+    },
+    "payload": {
+      "type": "string",
+      "pattern": "^payloads/[\\w.\\-]+$",
+      "description": "Optional explicit payload file reference (relative to the atomic's directory). When omitted, the runner falls back to parsing the body for `payloads/...` references and to a single .json/.md file in payloads/."
+    }
+  }
+}

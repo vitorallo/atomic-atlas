@@ -1,0 +1,75 @@
+version: 1
+generated: '2026-05-06'
+atomics:
+- technique: AML.T0051.000
+  vector: direct_chat
+  path: atomics/AML.T0051.000/direct_chat.md
+  guid: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
+  display_name: Direct Prompt Injection
+  runs: 5
+- technique: AML.T0051.001
+  vector: document_upload
+  path: atomics/AML.T0051.001/document_upload.md
+  guid: 2d4f8a0c-3e5b-4c6d-9e1f-2a3b4c5d6e7f
+  display_name: Indirect Prompt Injection
+  runs: 5
+- technique: AML.T0051.001
+  vector: mcp_server
+  path: atomics/AML.T0051.001/mcp_server.md
+  guid: 7a1b3c5d-2e4f-4d8a-b9c0-1f2e3d4a5b6c
+  display_name: Indirect Prompt Injection
+  runs: 5
+- technique: AML.T0051.001
+  vector: rag_corpus
+  path: atomics/AML.T0051.001/rag_corpus.md
+  guid: 3f8c2d1a-4b5e-4a6f-9c7d-8e2f1b3a5c9e
+  display_name: Indirect Prompt Injection
+  runs: 5
+- technique: AML.T0051.001
+  vector: tool_response
+  path: atomics/AML.T0051.001/tool_response.md
+  guid: 9c2e4f6a-1b3d-4e5f-8a7b-0c1d2e3f4a5b
+  display_name: Indirect Prompt Injection
+  runs: 5
+- technique: AML.T0053
+  vector: tool_response
+  path: atomics/AML.T0053/tool_response.md
+  guid: 4b5c6d7e-8f0a-4b1c-9d2e-3f4a5b6c7d8e
+  display_name: AI Agent Tool Invocation
+  runs: 5
+- technique: AML.T0065
+  vector: direct_chat
+  path: atomics/AML.T0065/direct_chat.md
+  guid: 0b1c2d3e-4f5a-4b6c-b37d-8e9f0a1b2c3d
+  display_name: LLM Prompt Crafting
+  runs: 5
+- technique: AML.T0086
+  vector: mcp_server
+  path: atomics/AML.T0086/mcp_server.md
+  guid: 5c6d7e8f-9a0b-4c1d-ae2f-3b4c5d6e7f8a
+  display_name: Exfiltration via Agentic Tool
+  runs: 5
+- technique: AML.T0093
+  vector: webhook
+  path: atomics/AML.T0093/webhook.md
+  guid: 6d7e8f9a-0b1c-4d2e-bf3a-4c5d6e7f8a9b
+  display_name: Prompt Infiltration via Public-Facing Application
+  runs: 5
+- technique: AML.T0098
+  vector: tool_response
+  path: atomics/AML.T0098/tool_response.md
+  guid: 7e8f9a0b-1c2d-4e3f-804a-5b6c7d8e9f0a
+  display_name: AI Agent Tool Credential Harvesting
+  runs: 5
+- technique: AML.T0099
+  vector: tool_response
+  path: atomics/AML.T0099/tool_response.md
+  guid: 8f9a0b1c-2d3e-4f0a-915b-6c7d8e9f0a1b
+  display_name: AI Agent Tool Data Poisoning
+  runs: 5
+- technique: AML.T0104
+  vector: mcp_server
+  path: atomics/AML.T0104/mcp_server.md
+  guid: 9a0b1c2d-3e4f-4a5b-826c-7d8e9f0a1b2c
+  display_name: Publish Poisoned AI Agent Tool
+  runs: 5
