@@ -174,6 +174,30 @@ atomic-atlas report --input results.json --format navigator --output dvaa.layer.
 
 `results.json` accumulates across `exec` runs, so the final Navigator layer reflects the full chain `T0051.001 → T0053 → T0086`.
 
+> **Tip:** the same chain can be expressed as a runbook and executed in one shot. See [`runbooks/dvaa/`](../runbooks/dvaa/) for 22 DVAA challenges already mapped, and [`docs/agent-runner.md`](agent-runner.md) for the runbook concept.
+
+## Step 8 (optional) — interactive review with `--hitl`
+
+For engagement work against production-like targets — or just for debugging payload generation — pass `--hitl` to gate every outbound message on operator confirmation:
+
+```bash
+atomic-atlas exec AML.T0051.001/rag_corpus \
+  --target http://localhost:8080 \
+  --profile targets/dvaa_local.yaml \
+  --authorized --hitl
+```
+
+Each send pauses with the about-to-go-out payload; you respond:
+
+- `y` — forward to the target
+- `s` — show the full message body (it's truncated by default)
+- `n` — skip this turn (counted as a failure for scoring)
+- `a` — abort the run / chain entirely
+
+Works on both `atomic-atlas exec` and `atomic-atlas runbook exec`. For runbooks, abort propagates through the chain — remaining steps are marked skipped.
+
+For domain-aware payload mutation (when `RedTeamingAttack`-tagged atomics are running), set the `target_context` block in your target profile — see [docs/targets.md](targets.md#target_context--domain-aware-payload-adaptation).
+
 ## Where to go next
 
 - **Authoring atomics** — copy `atomics/_TEMPLATE/vector_template.md`, fill in frontmatter + body sections, run `atomic-atlas validate`. See [SPEC.md](../SPEC.md).

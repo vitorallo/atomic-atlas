@@ -44,6 +44,23 @@ adapters:
     callback_port: 0             # 0 = kernel-assigned free port
 ```
 
+### `target_context` — domain-aware payload adaptation
+
+Optional top-level field in the profile. When present, its contents are forwarded to the attacker LLM's system prompt for `RedTeamingAttack`-tagged atomics so mutated payloads are domain-aware. Strongly recommended for non-DVAA / non-Lobster targets where generic seeds won't land.
+
+```yaml
+target_context:
+  domain: travel                      # industry / vertical (free-form string)
+  agent_role: customer support assistant for flight bookings
+  language: en                        # ISO-639-1
+  expected_tools: [search_flights, manage_booking, refund_request]
+  known_guardrails: [pii_redaction, output_filter_credentials]
+```
+
+Loose dict — well-known keys above, plus any others you want (`phi_redaction_policy` for healthcare, `compliance_frame` for legal, etc.) flow through verbatim. CLI `exec` without `target_context` still works against DVAA-style training targets but produces blind-attacker variants — not ideal for production-like systems.
+
+See [SPEC.md](../SPEC.md#payload-adaptation-why-seeds-describe-shape) for the full adaptation story.
+
 ### Auth schemes
 
 | Scheme | Adapter config |

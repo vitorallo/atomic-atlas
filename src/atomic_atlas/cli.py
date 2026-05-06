@@ -84,8 +84,10 @@ def list_atomics(vector: str | None, technique: str | None, as_json: bool):
 @click.option("--output", default="results.json", show_default=True, help="Output file for results JSON")
 @click.option("--authorized", is_flag=True, default=False,
               help="Confirm you are authorized to test this target (required)")
+@click.option("--hitl", is_flag=True, default=False,
+              help="Human-in-the-loop: confirm each outbound message before send. Useful for engagement work and debugging.")
 def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
-          output: str, authorized: bool):
+          output: str, authorized: bool, hitl: bool):
     """Run an atomic test against TARGET.
 
     ATOMIC_PATH: technique/vector, e.g. AML.T0051.001/rag_corpus
@@ -147,7 +149,7 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
             err=True,
         )
         sys.exit(3)
-    result = asyncio.run(run_atomic(atomic, target_obj, authorized=True))
+    result = asyncio.run(run_atomic(atomic, target_obj, authorized=True, hitl=hitl, profile=profile_data))
 
     click.echo(
         f"\n{'✓' if result.success_rate > 0 else '✗'} "
@@ -355,8 +357,10 @@ def runbook_show(runbook_id_or_path: str):
 @click.option("--output", default="runbook-results.json", show_default=True)
 @click.option("--authorized", is_flag=True, default=False,
               help="Confirm you are authorized to test this target (required)")
+@click.option("--hitl", is_flag=True, default=False,
+              help="Human-in-the-loop: confirm each outbound message before send. Aborts propagate through the chain.")
 def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
-                output: str, authorized: bool):
+                output: str, authorized: bool, hitl: bool):
     """Execute a runbook against TARGET."""
     if not authorized:
         click.echo("ERROR: --authorized flag required.", err=True)
@@ -380,7 +384,7 @@ def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
         profile_data.setdefault("base_url", target)
 
     click.echo(f"Running runbook {rb.runbook_id} ({len(rb.atomics)} step)…")
-    result = asyncio.run(run_runbook(rb, ATOMICS_DIR, profile_data, authorized=True))
+    result = asyncio.run(run_runbook(rb, ATOMICS_DIR, profile_data, authorized=True, hitl=hitl))
 
     mark = "✓" if result.chain_success else "✗"
     click.echo(

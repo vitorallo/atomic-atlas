@@ -104,50 +104,65 @@ The first public version (v0.1) must be demoable live in a keynote setting: `rec
 
 ## Milestones
 
-### v0.1 — Keynote-ready (current)
-- [ ] 12 seed atomics (9 techniques × focused agentic vectors)
-- [ ] JSON Schema frontmatter validation
-- [ ] RAGCorpusTarget (ChromaDB + Azure AI Search + HTTP ingest)
-- [ ] MCPServerTarget
-- [ ] ToolResponseTarget
-- [ ] DocumentUploadTarget
-- [ ] WebhookTarget
-- [ ] CLI: recon / exec / report / validate
-- [ ] ATLAS Navigator reporter
-- [ ] Coverage matrix reporter
-- [ ] Claude Code skill
-- [ ] SPEC.md + PRD.md + OPENSPEC.md
-- [ ] README with demo instructions
+### v0.1 — Keynote-ready (shipped)
+- [x] **27 atomics** across 19 ATLAS-real techniques + 1 unclassified slug (was 12 → expanded during the DVAA harvest)
+- [x] JSON Schema frontmatter validation (accepts AML.TXXXX and UNCLASSIFIED.<slug>)
+- [x] **RAGCorpusTarget** (ChromaDB + Azure AI Search + HTTP ingest)
+- [x] **MCPServerTarget** with two modes: `http_registry_stub` placeholder and `mcp_jsonrpc` real JSON-RPC 2.0
+- [x] **ToolResponseTarget**, **DocumentUploadTarget**, **WebhookTarget** (port-0 callback)
+- [x] **DirectChatTarget** wrapping PyRIT's OpenAIChatTarget — closed the `direct_chat` UnsupportedVector gap
+- [x] **CLI: recon / exec / report / validate / list / runbook**
+- [x] ATLAS Navigator reporter, coverage matrix reporter
+- [x] Claude Code skill (CLI-driven)
+- [x] **MCP server** (`atomic-atlas-mcp`) — read-only tools `list_atomics` / `read_atomic` / `recon_target`, no PyRIT required
+- [x] **Runbooks as a first-class concept** — ordered atomic chains with on_failure policies (stop / continue / retry); 22 DVAA runbooks shipped covering the entire DVAA v0.8.0 catalog
+- [x] **`--hitl` flag** on `exec` and `runbook exec` for interactive operator confirmation per outbound send
+- [x] **`target_context`** profile field flowing into the attacker LLM's system prompt for domain-aware payload adaptation
+- [x] **`RedTeamingAttack` proper integration** with `AttackAdversarialConfig` so `RedTeamingOrchestrator`-tagged atomics actually drive multi-turn mutation
+- [x] PyRIT 0.13 API migration (orchestrators → attacks)
+- [x] PyRIT as **optional dependency** (`[orchestrator]` extra) so list / recon / report / validate / MCP server work in lightweight installs
+- [x] **ATLAS v5.6.0 framework data vendored** at `data/atlas/`
+- [x] **`atomics/unclassified/` convention** for atomics with no current ATLAS technique
+- [x] SPEC.md, PRD.md, runbooks/README.md, docs/quickstart.md, docs/install.md, docs/targets.md, docs/agent-runner.md, docs/atlas-coverage.md
 - [ ] Initial git tag `v0.1.0`
+- [ ] Live keynote dry-run (architecture verified end-to-end against DVAA; full keynote rehearsal still TODO)
 
-### v0.2 — Chain support + broader target coverage
-- [ ] Atomic chaining: stitch T0051.001 → T0053 → T0086 into a kill chain
-- [ ] A2ATarget (agent-to-agent message delivery)
-- [ ] MCP server (expose library as MCP tools for any AI agent to use)
-- [ ] More atomics: email, A2A, computer-use vectors
-- [ ] Cost estimation before exec
-- [ ] `last_verified_date` field + model drift CI
+### v0.2 — A2A, scoring, kill chains
+- [ ] **A2ATarget** — unblocks live exec for `RB-DVAA-L4-02` (3 a2a_message atomics already shipped)
+- [ ] **WebFetchTarget**, **EmailTarget**, **ComputerUseTarget**
+- [ ] **`success_indicators` frontmatter field** OR **LLM judge scorer** — replace `_success_substring` which uses success-criteria prose as literal substring (live DVAA exec showed our scorer says fail while DVAA's `/stats` says success)
+- [ ] **Canonical kill-chain runbooks** under `runbooks/kill-chains/`: `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`
+- [ ] **Engagement-template runbooks** under `runbooks/engagement/`
+- [ ] Atomic catalog expansion: 17 new ATLAS-v5.6.0 agentic techniques (T0070, T0071, T0080.x, T0081, T0082, T0083, T0084.x, T0085.x, T0103, T0108, T0112.000)
+- [ ] Lobster — vulnerable LangGraph agent shipped at `examples/lobster/`, ATLAS-tagged in source
+- [ ] Cost estimation before exec; `last_verified_date` field + model-drift CI
+- [ ] `runbook report --format navigator|markdown|kill-chain`
 
 ### v0.3 — Community contribution pipeline
-- [ ] GitHub Actions CI: validate all atomics on PR
+- [ ] GitHub Actions CI: validate all atomics + runbooks on PR
 - [ ] Auto-generated index.yaml and coverage badge
 - [ ] Pinecone adapter for RAGCorpusTarget
-- [ ] LLM judge scorer (semantic success evaluation)
 - [ ] PyPI release
+- [ ] Sibling vulnerable-agent examples (OpenAI Agents SDK, Anthropic SDK)
+- [ ] **`HITLTargetWrapper`** auto-confirm threshold (`--hitl-threshold N`)
+- [ ] **TelegramChatTarget** + **DiscordChatTarget** (real-world deployment surfaces)
 
 ---
 
 ## Success metrics
 
-| Metric | v0.1 target |
-|---|---|
-| Seed atomics | ≥ 12 |
-| ATLAS techniques covered | ≥ 9 |
-| Entry vectors with at least one atomic | ≥ 5 |
-| Parser test pass rate | 100% |
-| Frontmatter validation: zero failures | 100% |
-| Keynote demo end-to-end (recon → exec → navigator) | Working against DVAA |
-| README time-to-first-test | < 5 minutes for a practitioner with Python and DVAA |
+| Metric | v0.1 target | v0.1 actual |
+|---|---|---|
+| Seed atomics | ≥ 12 | **27** |
+| ATLAS techniques covered | ≥ 9 | **19** + 1 unclassified slug |
+| Entry vectors with at least one atomic | ≥ 5 | **7** |
+| Parser test pass rate | 100% | **100%** (49/49 + 1 skipped) |
+| Frontmatter validation: zero failures | 100% | **100%** (27 atomics + 22 runbooks) |
+| ATLAS v5.6.0 high-confidence agentic technique coverage | n/a | **19 / 29 (66%)** |
+| ATLAS tactics traversed by runbooks | n/a | **9 of 16** |
+| DVAA challenges mapped to runbooks | n/a | **22 / 22** |
+| Keynote demo end-to-end (recon → exec → navigator) | Working against DVAA | Architecture verified live; full keynote rehearsal TODO |
+| README time-to-first-test | < 5 minutes for a practitioner with Python and DVAA | < 5 min via docs/quickstart.md |
 
 ---
 

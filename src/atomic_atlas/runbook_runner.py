@@ -55,6 +55,7 @@ async def run_runbook(
     atomics_dir: Path,
     target_profile: dict[str, Any],
     authorized: bool = False,
+    hitl: bool = False,
 ) -> RunbookResult:
     """Execute a runbook against a target.
 
@@ -64,6 +65,10 @@ async def run_runbook(
     A step is **skipped** if any of its transitive depends_on parents stopped
     the chain (on_failure=stop with zero successes). The skip is recorded
     explicitly in ``step_results`` so reports stay complete.
+
+    When ``hitl=True``, every outbound atomic send is gated by an operator
+    prompt. If the operator aborts, the chain stops; remaining steps are
+    marked skipped; cleanup runs.
     """
     require_pyrit()
     if not authorized:
@@ -109,7 +114,7 @@ async def run_runbook(
             atomic.runs = ref.runs
 
         target_obj = resolve_target(atomic, target_profile)
-        atomic_result = await run_atomic(atomic, target_obj, authorized=True)
+        atomic_result = await run_atomic(atomic, target_obj, authorized=True, hitl=hitl, profile=target_profile)
 
         step_result = RunbookStepResult(
             step_id=ref.id,
@@ -128,7 +133,7 @@ async def run_runbook(
             retries = ref.retry_max or 1
             for _ in range(retries):
                 target_retry = resolve_target(atomic, target_profile)
-                retry_result = await run_atomic(atomic, target_retry, authorized=True)
+                retry_result = await run_atomic(atomic, target_retry, authorized=True, hitl=hitl, profile=target_profile)
                 step_result.total_runs += retry_result.total_runs
                 step_result.successes += retry_result.successes
                 step_result.failures += retry_result.failures

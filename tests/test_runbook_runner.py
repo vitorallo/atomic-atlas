@@ -52,7 +52,7 @@ async def test_run_runbook_all_steps_succeed():
     """Two-step runbook where both steps succeed → chain_success=true."""
     rb = load(RUNBOOKS_DIR / "dvaa" / "L1-02__api-key-leak.md")
 
-    async def _fake_run(atomic, target, authorized=False):
+    async def _fake_run(atomic, target, authorized=False, hitl=False, profile=None):
         return _success_result(atomic, n_success=3, n_total=3)
 
     with patch("atomic_atlas.runbook_runner.run_atomic", side_effect=_fake_run):
@@ -74,7 +74,7 @@ async def test_run_runbook_stop_on_failure_aborts_chain():
 
     call_log = []
 
-    async def _fake_run(atomic, target, authorized=False):
+    async def _fake_run(atomic, target, authorized=False, hitl=False, profile=None):
         call_log.append(atomic.atlas_technique)
         # Step 1 (T0084) succeeds; step 2 (T0083) fails.
         if atomic.atlas_technique == "AML.T0083":
@@ -99,7 +99,7 @@ async def test_run_runbook_continue_failure_keeps_chain_alive():
     Downstream steps run; chain_success depends on stop-policy steps only."""
     rb = load(RUNBOOKS_DIR / "dvaa" / "L1-02__api-key-leak.md")
 
-    async def _fake_run(atomic, target, authorized=False):
+    async def _fake_run(atomic, target, authorized=False, hitl=False, profile=None):
         # Step 1 (T0084, on_failure=continue) fails; step 2 (T0083, on_failure=stop) succeeds.
         if atomic.atlas_technique == "AML.T0084":
             return _success_result(atomic, n_success=0, n_total=3)

@@ -43,6 +43,20 @@
 # matches AML.T0051.000 / direct_chat well.
 base_url: http://localhost:7002
 
+# Optional target_context — when present, is forwarded to the attacker LLM's
+# system prompt for RedTeamingAttack-tagged atomics so its mutations are
+# domain-aware. Free-form dict; well-known keys documented in
+# openspec/changes/payload-adaptation/specs.md.
+target_context:
+  domain: security_training
+  agent_role: typical chatbot with intentionally weak guardrails (DVAA HelperBot)
+  language: en
+  expected_tools:
+    - read_file
+    - write_file
+    - search_web
+  known_guardrails: []  # by design; this is a vulnerable training target
+
 adapters:
   direct_chat:
     type: openai_compatible

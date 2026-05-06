@@ -171,6 +171,34 @@ See `atomics/unclassified/README.md` for the convention and the move-when-ATLAS-
 
 The JSON Schema enforces the pattern `^(AML\.T[0-9]{4}(\.[0-9]{3})?|UNCLASSIFIED\.[a-z0-9]+(-[a-z0-9]+)*)$`.
 
+## Payload adaptation: why seeds describe shape
+
+Atomic-atlas payload seeds (`atomics/<technique>/payloads/*.md` and `*.json`) intentionally describe variant **families and shapes**, not portable strings to copy. A jailbreak that lands against DVAA HelperBot may not land against a travel-agency chatbot, a healthcare assistant, or any production agent with its own domain context, role, language, and guardrails. Effective attacks have to adapt; the seeds capture the technique-level invariant.
+
+The adaptation mechanism:
+
+1. **`RedTeamingAttack` runs an attacker LLM** that mutates the seed across runs and observes responses. Atomics tagged `pyrit_orchestrator: RedTeamingOrchestrator` use this path.
+2. **`target_context`** in the target profile gives the attacker LLM domain awareness:
+
+   ```yaml
+   target_context:
+     domain: travel
+     agent_role: customer support assistant for flight bookings
+     language: en
+     expected_tools: [search_flights, manage_booking, refund_request]
+     known_guardrails: [pii_redaction, output_filter_credentials]
+   ```
+
+   The attacker LLM's system prompt gets a context block describing the target; mutated payloads come out domain-aware (travel-themed jailbreak framings against a travel target rather than DVAA-flavored ones).
+
+3. **`--hitl` flag** on `atomic-atlas exec` and `atomic-atlas runbook exec` gates each outbound message for operator review. Useful for engagement work (sanity-checking before sending against a production-like target) and for debugging payload generation. Operator can approve, skip, or abort each turn.
+
+CLI `exec` without `target_context` produces less domain-aware variants — fine for DVAA / Lobster / hardened test stacks, less reliable for production-like targets.
+
+For high-stakes engagements, the **agent runner skill / MCP server** is the canonical workflow because it can adapt both delivery (vector) and payload (content) using its own reasoning, beyond what the attacker LLM does.
+
+DVAA-specific payload variants (`payloads/dvaa_*.json`) are reference shapes, not portable templates — they hardcode DVAA endpoints by design (`/etc/passwd`, AWS metadata IPs, etc.). When writing a new atomic, prefer shape-describing seeds (variant families, attack axes) over concrete strings.
+
 ## Design principles
 
 - **Intent over implementation.** The `.md` file describes what the attack does and how to recognize success. The runner figures out how to execute it against the specific target.

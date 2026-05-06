@@ -52,11 +52,13 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 | Doc | What it covers |
 |---|---|
-| [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report |
+| [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review |
 | [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
-| [docs/targets.md](docs/targets.md) | Target profile format, DVAA setup, Lakera Gandalf alternative, auth schemes |
+| [docs/targets.md](docs/targets.md) | Target profile format, `target_context` for domain-aware payload adaptation, DVAA setup, auth schemes |
 | [docs/agent-runner.md](docs/agent-runner.md) | Claude Code skill + MCP server, when to use them vs the CLI |
-| [SPEC.md](SPEC.md) | Atomic format reference (frontmatter, body sections, vectors, payloads) |
+| [docs/atlas-coverage.md](docs/atlas-coverage.md) | Project-wide ATLAS v5.6.0 coverage stats (techniques, vectors, tactics, runbooks) |
+| [runbooks/dvaa/README.md](runbooks/dvaa/README.md) | DVAA → ATLAS mapping (22 challenges, side-by-side technique counts) |
+| [SPEC.md](SPEC.md) | Atomic format reference; payload-adaptation principles |
 | [PRD.md](PRD.md) | Product requirements + milestone scope |
 
 ---
