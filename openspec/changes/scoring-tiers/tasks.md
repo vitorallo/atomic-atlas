@@ -79,10 +79,10 @@
 - [x] Live verify: `atomic-atlas exec AML.T0051.000/direct_chat ... --authorized` against DVAA HelperBot with key set → judge runs → 60–100% pass rate matching DVAA `/stats`
 
 ### Docs
-- [ ] `SPEC.md`: replace the brief "Payload adaptation" section's scoring note with a "Scoring tiers" subsection
-- [ ] `docs/quickstart.md`: add a "Scoring" subsection showing the three tiers in action
-- [ ] `docs/scoring.md` (new): authoring guide for `judge_guidance` / `judge_examples` / `scoring:` block
-- [ ] Update PRD.md v0.2 milestone to reflect this change
+- [x] `SPEC.md`: add a "Scoring tiers + evidence" section + expanded frontmatter example
+- [x] `docs/quickstart.md`: add "Scoring: judge tier with first-class evidence" subsection in Step 5
+- [x] `docs/scoring.md` (new): authoring guide for `judge_guidance` / `judge_examples` / `scoring:` / `extractors:`
+- [x] Update PRD.md v0.2 milestone to mark scoring as shipped
 
 ## v0.3 — extensions (not in this change)
 

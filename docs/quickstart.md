@@ -139,13 +139,37 @@ Results written to results.json
 
 > **Authorization gate.** `--authorized` is required per `exec` invocation. Running atomics against systems you do not own or have written permission to test is unethical and likely illegal.
 
+### Scoring: judge tier with first-class evidence
+
+Each run is scored by an automatic three-tier stack:
+
+1. **LLM judge** — when `OPENAI_API_KEY` is set, PyRIT's `SelfAskTrueFalseScorer` reads the response against the atomic's `## Success criteria`. Produces a verdict + natural-language reasoning.
+2. **IndicatorScorer** — any-of-N substring match over `success_indicators`. Auto-fallback when no judge.
+3. **Legacy `SubStringScorer`** — last-resort fallback; logs a deprecation warning.
+
+Every verdict carries a structured **`evidence`** payload — `tier`, `verdict`, `judge_reasoning`, `matched_indicators`, `extracted` (regex artifacts), `duration_ms`. It rides on each `run_details[i]` in `results.json`, gets rendered inline by the markdown reporter, and surfaces in the ATLAS Navigator metadata (`evidence_count` / `top_extracted` per technique).
+
+For credential / config-disclosure atomics, optional `extractors:` frontmatter captures actual content into `evidence.extracted`:
+
+```bash
+atomic-atlas exec AML.T0083/direct_chat \
+  --target http://localhost:7003/v1 \
+  --profile targets/dvaa_legacybot.yaml \
+  --runs 3 --authorized
+```
+
+Against LegacyBot the regex extractors harvest the actual leaked credentials (`sk-dvaa-openai-test-key-…`, `dvaa-admin-secret`) into `evidence.extracted` — verdict + the artifacts in one pass.
+
+Override the auto-selection per atomic via `scoring: { strategy: indicators }` (skip judge cost when indicators are deterministic ground truth) or globally via `ATOMIC_ATLAS_SCORING=indicators`. Full authoring guide: [`docs/scoring.md`](scoring.md).
+
 ## Step 6 — report
 
 ```bash
 # Coverage matrix (terminal)
 atomic-atlas report --input results.json --format coverage
 
-# Markdown report (terminal or file)
+# Markdown report (terminal or file) — renders per-run evidence inline:
+# tier, matched indicators, judge reasoning, extracted credentials.
 atomic-atlas report --input results.json --format markdown
 
 # ATLAS Navigator layer JSON

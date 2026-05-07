@@ -130,7 +130,7 @@ The first public version (v0.1) must be demoable live in a keynote setting: `rec
 ### v0.2 — A2A, scoring, kill chains
 - [ ] **A2ATarget** — unblocks live exec for `RB-DVAA-L4-02` (3 a2a_message atomics already shipped)
 - [ ] **WebFetchTarget**, **EmailTarget**, **ComputerUseTarget**
-- [ ] **`success_indicators` frontmatter field** OR **LLM judge scorer** — replace `_success_substring` which uses success-criteria prose as literal substring (live DVAA exec showed our scorer says fail while DVAA's `/stats` says success)
+- [x] **`success_indicators` frontmatter field** + **LLM judge scorer** — three-tier scorer stack (judge > indicators > legacy substring) plus first-class `Evidence` (`tier`, `judge_reasoning`, `matched_indicators`, `extracted`, `duration_ms`). Live-verified against DVAA: judge tier extracts real LegacyBot creds (`sk-dvaa-openai-test-key-…`, `dvaa-admin-secret`) end-to-end. See [`docs/scoring.md`](docs/scoring.md). [openspec/changes/scoring-tiers]
 - [ ] **Canonical kill-chain runbooks** under `runbooks/kill-chains/`: `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`
 - [ ] **Engagement-template runbooks** under `runbooks/engagement/`
 - [ ] Atomic catalog expansion: 17 new ATLAS-v5.6.0 agentic techniques (T0070, T0071, T0080.x, T0081, T0082, T0083, T0084.x, T0085.x, T0103, T0108, T0112.000)
