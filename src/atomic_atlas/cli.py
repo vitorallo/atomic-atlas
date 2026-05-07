@@ -86,8 +86,12 @@ def list_atomics(vector: str | None, technique: str | None, as_json: bool):
               help="Confirm you are authorized to test this target (required)")
 @click.option("--hitl", is_flag=True, default=False,
               help="Human-in-the-loop: confirm each outbound message before send. Useful for engagement work and debugging.")
+@click.option("--payload-file", "payload_file", default=None, type=click.Path(exists=True),
+              help="Override the atomic's seed_prompt with the payload from this file. "
+                   "Accepts an `atomic-atlas adapt` bundle (preferred — frontmatter + ## Payload "
+                   "blockquote) or a plain text file (used verbatim).")
 def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
-          output: str, authorized: bool, hitl: bool):
+          output: str, authorized: bool, hitl: bool, payload_file: str | None):
     """Run an atomic test against TARGET.
 
     ATOMIC_PATH: technique/vector, e.g. AML.T0051.001/rag_corpus
@@ -119,6 +123,14 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
     atomic = load(md_path)
     if runs is not None:
         atomic.runs = runs
+    if payload_file:
+        try:
+            payload_text, source_label = _load_payload_from_file(Path(payload_file))
+        except Exception as exc:
+            click.echo(f"ERROR: --payload-file {payload_file!r}: {exc}", err=True)
+            sys.exit(2)
+        atomic.seed_prompt = payload_text
+        click.echo(f"Using {source_label} payload from {payload_file}")
 
     profile_data: dict = {"base_url": target, "adapters": {}}
     if profile:
@@ -376,6 +388,37 @@ def adapt_cmd(
         click.echo(f"Adapted payload written to {output_file}")
     else:
         click.echo(bundle)
+
+
+def _load_payload_from_file(path: Path) -> tuple[str, str]:
+    """Load a payload override from a file.
+
+    Tries to parse as an ``atomic-atlas adapt`` bundle first (canonical
+    YAML frontmatter + ``## Payload`` blockquote). Falls back to using the
+    file contents verbatim as the payload string.
+
+    Returns ``(payload_text, source_label)`` — the label is either
+    ``"adapted"`` or ``"raw"`` and is shown to the operator so they know
+    how the file was interpreted.
+
+    Raises ``ValueError`` only if the file is empty or unreadable.
+    """
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        raise ValueError("file is empty")
+
+    # Bundle path: frontmatter starts with ``---``.
+    if text.lstrip().startswith("---"):
+        try:
+            from .payload_adapter import Adaptation
+            adaptation = Adaptation.from_markdown(text)
+            return adaptation.payload, "adapted"
+        except Exception:
+            # Fall through to raw — the operator may have a custom YAML
+            # frontmatter prepended to plain prose.
+            pass
+
+    return text.strip(), "raw"
 
 
 def _resolve_atomic_path(atomic_path: str) -> Path:
