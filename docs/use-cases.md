@@ -177,10 +177,10 @@ The biggest unit of work: a runbook is an ordered chain of atomics tied to an en
 atomic-atlas runbook list --type dvaa_challenge
 
 # 2. Inspect the chain.
-atomic-atlas runbook show RB-DVAA-L1-02
+cat runbooks/dvaa/L1-02__api-key-leak.md
 
 # 3. Validate it's well-formed.
-atomic-atlas runbook validate
+atomic-atlas validate runbooks/dvaa/L1-02__api-key-leak.md
 
 # 4. Execute end-to-end.
 atomic-atlas runbook exec RB-DVAA-L1-02 \

@@ -213,34 +213,65 @@ def report(input_file: str, fmt: str, output: str | None):
 
 
 @cli.command()
-@click.argument("atomic_path", default=None, required=False)
-def validate(atomic_path: str | None):
-    """Validate atomic frontmatter. Validates all atomics if no path given."""
-    from .parser import load, load_all
+@click.argument("path", default=None, required=False)
+def validate(path: str | None):
+    """Validate atomic or runbook frontmatter.
 
-    if atomic_path:
-        paths = [_resolve_atomic_path(atomic_path)]
+    Auto-detects atomics vs runbooks by file path (anything under runbooks/
+    is a runbook). When no path is given, validates every atomic AND every
+    runbook in the catalog.
+    """
+    from .parser import load as load_atomic
+    from .runbook import load as load_runbook, resolve_atomic_ref
+
+    atomic_paths: list[Path] = []
+    runbook_paths: list[Path] = []
+
+    if path:
+        p = Path(path)
+        if not p.exists():
+            # Try resolving as a technique/vector reference for atomics.
+            p = _resolve_atomic_path(path)
+        if "runbooks" in p.parts or p.is_relative_to(RUNBOOKS_DIR):
+            runbook_paths.append(p)
+        else:
+            atomic_paths.append(p)
     else:
-        paths = [
+        atomic_paths = [
             p for p in ATOMICS_DIR.rglob("*.md")
             if not any(part.startswith("_") for part in p.parts)
             and "payloads" not in p.parts
             and p.name.upper() not in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}
         ]
+        runbook_paths = [
+            p for p in RUNBOOKS_DIR.rglob("*.md")
+            if not any(part.startswith("_") for part in p.parts)
+            and p.name.upper() not in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}
+        ]
 
     errors = 0
-    for p in paths:
+    for p in atomic_paths:
         try:
-            load(p, validate=True)
-            click.echo(f"  ✓ {p.relative_to(ATOMICS_DIR)}")
+            load_atomic(p, validate=True)
+            click.echo(f"  ✓ atomic   {p.relative_to(ATOMICS_DIR)}")
         except Exception as exc:
-            click.echo(f"  ✗ {p}: {exc}", err=True)
+            click.echo(f"  ✗ atomic   {p}: {exc}", err=True)
+            errors += 1
+    for p in runbook_paths:
+        try:
+            rb = load_runbook(p)
+            for ref in rb.atomics:
+                resolve_atomic_ref(ref, ATOMICS_DIR)
+            rb.topological_order()
+            click.echo(f"  ✓ runbook  {p.relative_to(RUNBOOKS_DIR)}")
+        except Exception as exc:
+            click.echo(f"  ✗ runbook  {p}: {exc}", err=True)
             errors += 1
 
     if errors:
         sys.exit(1)
-    else:
-        click.echo(f"\nAll {len(paths)} atomic(s) valid.")
+    total = len(atomic_paths) + len(runbook_paths)
+    click.echo(f"\nAll {total} file(s) valid ({len(atomic_paths)} atomic, {len(runbook_paths)} runbook).")
 
 
 @cli.command(name="adapt")
@@ -540,36 +571,6 @@ def runbook_list(rtype: str | None, tactic: str | None, as_json: bool):
     click.echo(f"\n{len(rbs)} runbook(s).")
 
 
-@runbook_group.command(name="show")
-@click.argument("runbook_id_or_path")
-def runbook_show(runbook_id_or_path: str):
-    """Print a runbook with resolved atomic dependency graph."""
-    from .runbook import resolve_atomic_ref
-    rb = _resolve_runbook(runbook_id_or_path)
-    click.echo(f"# {rb.display_name}")
-    click.echo(f"id:          {rb.runbook_id}")
-    click.echo(f"type:        {rb.runbook_type}")
-    click.echo(f"guid:        {rb.guid}")
-    if rb.target_origin:
-        click.echo(f"origin:      {rb.target_origin}")
-    if rb.atlas_tactics:
-        click.echo(f"tactics:     {', '.join(rb.atlas_tactics)}")
-    click.echo(f"\nAtomic chain ({len(rb.atomics)} steps, topological order):")
-    for ref in rb.topological_order():
-        try:
-            atomic = resolve_atomic_ref(ref, ATOMICS_DIR)
-            mark = "✓"
-            label = f"{atomic.atlas_technique} / {atomic.interaction_vector}"
-        except Exception as resolve_err:
-            mark = "✗"
-            label = f"UNRESOLVABLE: {resolve_err}"
-        deps = f" depends_on={ref.depends_on}" if ref.depends_on else ""
-        click.echo(
-            f"  [{mark}] step {ref.id} on_failure={ref.on_failure}{deps}: {label}"
-        )
-    click.echo(f"\nSuccess criteria:\n  {rb.success_criteria}")
-
-
 @runbook_group.command(name="exec")
 @click.argument("runbook_id_or_path")
 @click.option("--target", required=True, help="Target agent base URL")
@@ -637,34 +638,6 @@ def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
     click.echo(f"Results written to {output}")
 
 
-@runbook_group.command(name="validate")
-@click.argument("runbook_path", default=None, required=False)
-def runbook_validate(runbook_path: str | None):
-    """Validate runbook frontmatter, atomic-ref resolution, and DAG shape."""
-    from .runbook import load, resolve_atomic_ref
-    if runbook_path:
-        paths = [Path(runbook_path)]
-    else:
-        paths = [
-            p for p in RUNBOOKS_DIR.rglob("*.md")
-            if not any(part.startswith("_") for part in p.parts)
-            and p.name.upper() not in {"README.MD", "CHANGELOG.MD", "CONTRIBUTING.MD"}
-        ]
-    errors = 0
-    for p in paths:
-        try:
-            rb = load(p)
-            for ref in rb.atomics:
-                resolve_atomic_ref(ref, ATOMICS_DIR)
-            rb.topological_order()
-            click.echo(f"  ✓ {p.relative_to(RUNBOOKS_DIR)}")
-        except Exception as validation_err:
-            click.echo(f"  ✗ {p}: {validation_err}", err=True)
-            errors += 1
-    if errors:
-        sys.exit(1)
-    else:
-        click.echo(f"\nAll {len(paths)} runbook(s) valid.")
 
 
 # ---------------------------------------------------------------------------

@@ -15,8 +15,6 @@ atomic-atlas <subcommand> [OPTIONS] [ARGS]
 | [`exec`](#exec) | Run an atomic against a target. |
 | [`report`](#report) | Render results — Navigator JSON, coverage matrix, markdown. |
 | [`runbook list`](#runbook-list) | Browse the runbook catalog (chains of atomics). |
-| [`runbook show`](#runbook-show) | Print a runbook's resolved DAG. |
-| [`runbook validate`](#runbook-validate) | Schema-check runbook frontmatter + DAG. |
 | [`runbook exec`](#runbook-exec) | Run a runbook (kill chain / engagement) end-to-end. |
 
 The base install supports `list`, `recon`, `report`, `validate`. `exec`, `adapt`, and `runbook exec` need PyRIT and (for `adapt` + LLM judge tier) an OpenAI-compatible LLM:
@@ -260,39 +258,7 @@ atomic-atlas runbook list --tactic exfiltration --json
 
 ---
 
-## `runbook show`
-
-Print a runbook with its resolved atomic dependency graph.
-
-```bash
-atomic-atlas runbook show <RUNBOOK_ID_OR_PATH>
-```
-
-**Example:**
-
-```bash
-atomic-atlas runbook show RB-DVAA-L1-02
-atomic-atlas runbook show runbooks/dvaa-challenges/RB-DVAA-L1-02.yaml
-```
-
----
-
-## `runbook validate`
-
-Schema-check runbook frontmatter, atomic-ref resolution, DAG shape.
-
-```bash
-atomic-atlas runbook validate [RUNBOOK_PATH]
-```
-
-**Examples:**
-
-```bash
-atomic-atlas runbook validate                          # all runbooks
-atomic-atlas runbook validate runbooks/dvaa-challenges/RB-DVAA-L1-02.yaml
-```
-
----
+> Looking for `runbook show` or `runbook validate`? Both were removed in the v0.2 simplification pass. To inspect a runbook, just `cat` the file. To validate, the top-level [`validate`](#validate) auto-detects atomics vs runbooks.
 
 ## `runbook exec`
 
