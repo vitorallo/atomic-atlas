@@ -93,6 +93,73 @@
       "type": "string",
       "minLength": 1,
       "description": "Optional concrete attack-string sent verbatim as the objective when no attacker LLM is available. With an attacker LLM the seed serves as an initial mutation seed; without one (e.g., ATOMIC_ATLAS_NO_ATTACKER_LLM=1 or no API key) it IS the attack string. Falls back to the atomic's '## Interaction' body section if not set."
+    },
+    "judge_guidance": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional prose hint prepended to the LLM judge's true_description. Promptfoo's graderGuidance equivalent — biases the judge toward the technique-specific signal without rewriting success criteria."
+    },
+    "judge_examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["response", "verdict"],
+        "additionalProperties": false,
+        "properties": {
+          "response": {"type": "string", "minLength": 1, "description": "Sample agent response."},
+          "verdict": {"type": "string", "enum": ["true", "false"], "description": "Expected judge verdict for this response."},
+          "reason": {"type": "string", "description": "Optional one-line explanation of why this response gets that verdict."}
+        }
+      },
+      "description": "Optional list of {response, verdict, reason} triples spliced into the judge's metadata. Promptfoo's graderExamples equivalent — concrete pass/fail examples improve judge accuracy."
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["auto", "judge", "indicators", "substring", "composite"],
+          "default": "auto",
+          "description": "Override scorer-tier selection. 'auto' lets the runner pick (judge if API key present, else indicators, else substring). 'composite' requires the 'scorers' field."
+        },
+        "scorers": {
+          "type": "array",
+          "items": {"type": "string", "enum": ["judge", "indicators", "substring"]},
+          "minItems": 2,
+          "description": "Child scorers for composite strategy."
+        },
+        "aggregator": {
+          "type": "string",
+          "enum": ["OR", "AND", "MAJORITY"],
+          "default": "OR",
+          "description": "How to combine child scorer verdicts in composite strategy."
+        },
+        "refusal_check": {
+          "type": "string",
+          "enum": ["off", "cheap", "llm"],
+          "default": "cheap",
+          "description": "Refusal short-circuit mode. 'cheap' = substring of curated refusal phrases (no LLM call). 'llm' = pyrit.score.SelfAskRefusalScorer (one extra LLM call). 'off' disables."
+        },
+        "judge_model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Per-atomic judge model override (e.g., 'gpt-4o-mini'). Falls back to ATOMIC_ATLAS_ATTACKER_MODEL env or PyRIT default."
+        }
+      }
+    },
+    "extractors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "pattern"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string", "minLength": 1, "description": "Key under which matches are stored in evidence.extracted."},
+          "pattern": {"type": "string", "minLength": 1, "description": "Python regex applied to the agent's response. All matches are collected into evidence.extracted[name]."}
+        }
+      },
+      "description": "Optional regex-based extractors for capturing artifacts (credentials, file fragments, system-prompt leaks) from the response. Pure regex — no LLM. Matches accumulate into evidence.extracted."
     }
   }
 }

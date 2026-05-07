@@ -23,17 +23,22 @@ def to_navigator_layer(results: list[RunResult], name: str = "atomic-atlas cover
             f"Vector: {r.interaction_vector} | "
             f"{r.successes}/{r.total_runs} runs succeeded ({score:.0%})"
         )
+        evidence_count, top_extracted = _summarize_evidence(r.run_details)
+        metadata = [
+            {"name": "vector", "value": r.interaction_vector},
+            {"name": "success_rate", "value": f"{score:.2f}"},
+            {"name": "guid", "value": r.guid},
+            {"name": "evidence_count", "value": str(evidence_count)},
+        ]
+        if top_extracted:
+            metadata.append({"name": "top_extracted", "value": top_extracted})
         techniques.append({
             "techniqueID": technique_id,
             "tactic": None,
             "color": color,
             "comment": comment,
             "enabled": True,
-            "metadata": [
-                {"name": "vector", "value": r.interaction_vector},
-                {"name": "success_rate", "value": f"{score:.2f}"},
-                {"name": "guid", "value": r.guid},
-            ],
+            "metadata": metadata,
             "showSubtechniques": False,
         })
 
@@ -54,6 +59,30 @@ def to_navigator_layer(results: list[RunResult], name: str = "atomic-atlas cover
             {"label": "Full success (100%)", "color": "#ff4500"},
         ],
     }
+
+
+def _summarize_evidence(run_details: list[dict[str, Any]]) -> tuple[int, str]:
+    """Count evidence dicts and pick the most-cited extracted value across runs.
+
+    Returns ``(evidence_count, top_extracted)`` where ``top_extracted`` is a
+    short string like ``openai_key=sk-test-abc123 (3x)`` or ``""`` if nothing
+    was extracted across the runs.
+    """
+    count = 0
+    extracted_freq: dict[tuple[str, str], int] = {}
+    for d in run_details or []:
+        ev = d.get("evidence")
+        if not ev:
+            continue
+        count += 1
+        for name, hits in (ev.get("extracted") or {}).items():
+            for h in hits:
+                key = (name, h)
+                extracted_freq[key] = extracted_freq.get(key, 0) + 1
+    if not extracted_freq:
+        return count, ""
+    (name, value), n = max(extracted_freq.items(), key=lambda kv: kv[1])
+    return count, f"{name}={value} ({n}x)"
 
 
 def _score_to_color(rate: float) -> str:

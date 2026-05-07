@@ -38,6 +38,10 @@ class AtomicTest:
     payload: str | None = None  # optional explicit payload reference
     success_indicators: list[str] | None = None  # optional explicit scorer hits
     seed_prompt: str | None = None  # optional concrete attack-string used as objective
+    judge_guidance: str | None = None  # prose hint prepended to LLM judge true_description
+    judge_examples: list[dict[str, str]] | None = None  # {response, verdict, reason} triples
+    scoring: dict[str, Any] | None = None  # scoring strategy / refusal_check / judge_model
+    extractors: list[dict[str, str]] | None = None  # [{name, pattern}] regex extractors
 
     @property
     def technique_dir(self) -> Path:
@@ -83,6 +87,10 @@ def load(path: Path | str, validate: bool = True) -> AtomicTest:
         payload=frontmatter.get("payload"),
         success_indicators=frontmatter.get("success_indicators"),
         seed_prompt=frontmatter.get("seed_prompt"),
+        judge_guidance=frontmatter.get("judge_guidance"),
+        judge_examples=frontmatter.get("judge_examples"),
+        scoring=frontmatter.get("scoring"),
+        extractors=frontmatter.get("extractors"),
     )
 
 

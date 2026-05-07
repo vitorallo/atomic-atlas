@@ -31,6 +31,7 @@ class RunbookStepResult:
     on_failure: str
     skipped: bool = False
     skip_reason: str | None = None
+    evidence_per_run: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def success_rate(self) -> float:
@@ -127,6 +128,9 @@ async def run_runbook(
             errors=atomic_result.errors,
             duration_seconds=atomic_result.duration_seconds,
             on_failure=ref.on_failure,
+            evidence_per_run=[
+                d["evidence"] for d in atomic_result.run_details if "evidence" in d
+            ],
         )
 
         if atomic_result.successes == 0 and ref.on_failure == "retry":
@@ -139,6 +143,9 @@ async def run_runbook(
                 step_result.failures += retry_result.failures
                 step_result.errors += retry_result.errors
                 step_result.duration_seconds += retry_result.duration_seconds
+                step_result.evidence_per_run.extend(
+                    d["evidence"] for d in retry_result.run_details if "evidence" in d
+                )
                 if retry_result.successes > 0:
                     break
 

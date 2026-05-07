@@ -205,18 +205,94 @@ Add to `schema/atomic_frontmatter.schema.json`:
     },
     "aggregator": {"type": "string", "enum": ["OR", "AND", "MAJORITY"]}
   }
+},
+"extractors": {
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "pattern"],
+    "additionalProperties": false,
+    "properties": {
+      "name": {"type": "string", "minLength": 1, "description": "Stable key under evidence.extracted"},
+      "pattern": {"type": "string", "minLength": 1, "description": "Python regex (re.findall) applied to the response text"},
+      "flags": {"type": "string", "description": "Optional re flags string, e.g. 'i' for IGNORECASE, 'is' for IGNORECASE+DOTALL"}
+    }
+  },
+  "description": "Optional list of regex extractors run against the agent's response. Hits populate evidence.extracted[<name>]. See scoring-tiers."
 }
 ```
 
-## Score result shape
+## Evidence — first-class data type
+
+Every scored run now produces structured **Evidence** alongside the binary verdict. Operators attaching findings to engagement reports need to show *what* the agent said, *what* matched, *what* was extracted (credentials, file content, system-prompt fragments), and *what* prompt elicited it. A 200-char `response_preview` doesn't carry that.
+
+### `Evidence` dataclass
+
+Lives at `src/atomic_atlas/evidence.py`:
+
+```python
+@dataclass
+class Evidence:
+    tier: str                              # "judge" | "indicators" | "substring" | "composite" | "refusal_short_circuit"
+    verdict: bool
+    matched_against: str                   # response excerpt (≤ 1000 chars) the verdict was based on
+    attack_input: str                      # the objective / prompt that produced the response
+    rationale: str                         # short verdict explanation
+    matched_indicators: list[str] = []     # IndicatorScorer hits (lowercased substrings that fired)
+    judge_reasoning: str | None = None     # LLM judge's natural-language reasoning (when tier=judge)
+    judge_model: str | None = None         # model that served as judge
+    refusal_short_circuited: bool = False
+    extracted: dict[str, list[str]] = {}   # structured extraction (per `extractors:` frontmatter)
+    duration_ms: int = 0                   # scoring latency
+
+    def to_dict(self) -> dict[str, Any]: ...
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "Evidence": ...
+```
+
+### Where Evidence travels
+
+1. **Scorer emits it.** Each scorer wrapper (`IndicatorScorer`, `LLMJudgeScorer`, `RefusalShortCircuitScorer`, composite) constructs an `Evidence` and stuffs it into PyRIT's existing `Score.score_metadata["evidence"]` channel — no PyRIT modifications needed.
+2. **Run loop reads it.** `runner.run_atomic`, after `attack.execute_async`, pulls `attack_result.last_score.score_metadata["evidence"]` and attaches it to `result.run_details[i]["evidence"]`. Enriches with `attack_input` (the `objective` we passed into `execute_async`) and `duration_ms` (timed at the run-loop level).
+3. **Runbook aggregates.** `RunbookStepResult` gains `evidence_per_run: list[dict]` so a chain step's evidence is preserved alongside its aggregate counts.
+4. **Reports surface it.**
+   - `cli._markdown_report` renders evidence inline per run: matched indicators / judge reasoning / extracted bullets.
+   - `reporters.atlas_navigator.to_navigator_layer` adds per-technique `metadata: {evidence_count, top_extracted}`.
+   - Per-run evidence persists in `results.json` and `runbook-results.json`.
+
+### Snippet truncation
+
+`matched_against` is capped at 1000 chars (~200 words) by default. If the underlying response is longer, the snippet ends with `...truncated; <N> more chars`. Override via `ATOMIC_ATLAS_EVIDENCE_SNIPPET_MAX` env var.
+
+## `extractors:` frontmatter — opt-in structured extraction
+
+Some atomics produce well-defined extractable artifacts (credentials, file paths, leaked PII). The optional `extractors:` frontmatter declares regex patterns the runner applies to the response, populating `evidence.extracted`:
+
+```yaml
+# atomics/AML.T0083/direct_chat.md
+extractors:
+  - name: openai_api_key
+    pattern: "sk-[A-Za-z0-9_-]{20,}"
+  - name: bearer_token
+    pattern: "Bearer\\s+[A-Za-z0-9._-]+"
+  - name: password_field
+    pattern: "(?i)password[\\s:=]+\\S+"
+```
+
+Runner pass: after the scorer returns, `runner._extract_artifacts(response_text, atomic.extractors)` runs each pattern with `re.findall`, deduplicates within each pattern, and merges into `evidence.extracted[name] = [matches]`. Pure regex, no LLM. v0.3 may add a callable extractor reference for JSON / structured tool-response parsing.
+
+Backfill priority (high-value cred-extraction atomics): T0083, T0098, T0086, T0084, T0097.
+
+## Score result shape (PyRIT-side)
 
 PyRIT scorers already return `Score` objects with `score_value`, `score_rationale`, `score_metadata`. Our wrappers extend the metadata with:
 
-- `tier`: `"judge"` | `"indicators"` | `"substring"` | `"composite"` | `"refusal_short_circuit"`
-- `judge_model` (if applicable)
+- `evidence`: the `Evidence.to_dict()` payload described above
+- `tier`: `"judge"` | `"indicators"` | `"substring"` | `"composite"` | `"refusal_short_circuit"` (denormalized for quick access)
+- `judge_model` (when applicable)
 - `refusal_short_circuited`: bool
 
-Reporters (`atlas_navigator`, `coverage_matrix`) ignore these today; future Navigator / dashboard layers can break out judge-vs-deterministic agreement per technique.
+Reporters read from `metadata["evidence"]`; the denormalized fields are convenience accessors. Existing reporters (`atlas_navigator`, `coverage_matrix`) ignore these today; the v0.2 reporter pass enriches them.
 
 ## Backwards compatibility
 

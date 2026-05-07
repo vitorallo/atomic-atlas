@@ -50,3 +50,48 @@ def test_invalid_frontmatter_raises(tmp_path):
     bad.write_text("---\natlas_technique: INVALID\nguid: not-a-uuid\n---\n# test\n")
     with pytest.raises(ValueError):
         load(bad, validate=True)
+
+
+def test_loads_judge_guidance_examples_extractors():
+    """The five backfilled atomics carry judge_guidance / judge_examples /
+    extractors fields that round-trip through the parser."""
+    t0083 = load(ATOMICS_DIR / "AML.T0083" / "direct_chat.md")
+    assert t0083.judge_guidance and "credential" in t0083.judge_guidance.lower()
+    assert t0083.judge_examples and len(t0083.judge_examples) >= 2
+    assert all("verdict" in ex for ex in t0083.judge_examples)
+    assert t0083.extractors
+    names = {e["name"] for e in t0083.extractors}
+    assert "openai_api_key" in names
+
+    t0086 = load(ATOMICS_DIR / "AML.T0086" / "mcp_server.md")
+    assert t0086.extractors
+    assert {e["name"] for e in t0086.extractors} >= {"passwd_entry", "aws_metadata_imds"}
+
+
+def test_scoring_field_round_trip(tmp_path):
+    """An atomic with a scoring: block must parse and surface the dict."""
+    body = (
+        "---\n"
+        "atlas_technique: AML.T0051.000\n"
+        "display_name: Test\n"
+        "interaction_vector: direct_chat\n"
+        "guid: 11111111-1111-4111-8111-111111111111\n"
+        "scoring:\n"
+        "  strategy: composite\n"
+        "  scorers: [judge, indicators]\n"
+        "  aggregator: OR\n"
+        "  refusal_check: cheap\n"
+        "  judge_model: gpt-4o-mini\n"
+        "---\n"
+        "# Test\n"
+    )
+    p = tmp_path / "scoring.md"
+    p.write_text(body)
+    a = load(p)
+    assert a.scoring == {
+        "strategy": "composite",
+        "scorers": ["judge", "indicators"],
+        "aggregator": "OR",
+        "refusal_check": "cheap",
+        "judge_model": "gpt-4o-mini",
+    }

@@ -243,6 +243,29 @@ def _resolve_atomic_path(atomic_path: str) -> Path:
     raise click.BadParameter(f"Atomic not found: {atomic_path}")
 
 
+def _render_evidence_block(ev: dict) -> list[str]:
+    """Render an Evidence dict as indented markdown bullets under a run line."""
+    out: list[str] = []
+    tier = ev.get("tier", "?")
+    out.append(f"  - tier: `{tier}`")
+    if ev.get("refusal_short_circuited"):
+        out.append("  - refusal short-circuit fired (primary scorer skipped)")
+    matched = ev.get("matched_indicators") or []
+    if matched:
+        joined = ", ".join(f"`{m}`" for m in matched)
+        out.append(f"  - matched indicators: {joined}")
+    reasoning = ev.get("judge_reasoning")
+    if reasoning:
+        compact = reasoning.replace("\n", " ").strip()
+        out.append(f"  - judge: {compact[:240]}")
+    extracted = ev.get("extracted") or {}
+    for name, hits in extracted.items():
+        sample = ", ".join(f"`{h}`" for h in hits[:3])
+        more = f" (+{len(hits) - 3} more)" if len(hits) > 3 else ""
+        out.append(f"  - extracted **{name}**: {sample}{more}")
+    return out
+
+
 def _markdown_report(results, output: str | None) -> None:
     lines = ["# atomic-atlas results\n"]
     for r in results:
@@ -264,6 +287,9 @@ def _markdown_report(results, output: str | None) -> None:
                     mark = "✓" if d.get("success") else "✗"
                     preview = d.get("response_preview", "").replace("\n", " ").strip()
                     lines.append(f"- Run {run_num} {mark} — {preview[:160]}")
+                    ev = d.get("evidence")
+                    if ev:
+                        lines.extend(_render_evidence_block(ev))
         lines.append("")
     text = "\n".join(lines)
     if output:

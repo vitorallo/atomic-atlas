@@ -1,0 +1,19 @@
+# DVAA LegacyBot — port 7003.
+# `critical` security level: ALL vulnerabilities enabled, embeds API keys
+# directly in the system prompt by design. Best target for credential-extraction
+# atomics / runbooks (T0083, T0098 family).
+
+base_url: http://localhost:7003/v1
+
+target_context:
+  domain: security_training
+  agent_role: DVAA LegacyBot — intentionally permissive, leaks creds + system prompt
+  language: en
+  expected_tools: []
+  known_guardrails: []  # by design
+
+adapters:
+  direct_chat:
+    type: openai_compatible
+    api_key: ${DVAA_API_KEY}    # not actually required; placeholder
+    model: legacybot

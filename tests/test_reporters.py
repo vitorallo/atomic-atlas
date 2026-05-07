@@ -67,6 +67,31 @@ def test_navigator_layer_color_reflects_success():
         assert high["techniques"][0].get("score") != none["techniques"][0].get("score")
 
 
+def test_navigator_layer_includes_evidence_summary():
+    """When run_details carry evidence dicts, the Navigator metadata for the
+    technique should expose evidence_count and the most-cited extracted value."""
+    r = _result("AML.T0083", "direct_chat", 2, 3)
+    r.run_details = [
+        {"run": 1, "success": True, "evidence": {
+            "tier": "indicators", "verdict": True,
+            "extracted": {"openai_key": ["sk-test-abc"]},
+        }},
+        {"run": 2, "success": True, "evidence": {
+            "tier": "indicators", "verdict": True,
+            "extracted": {"openai_key": ["sk-test-abc"]},
+        }},
+        {"run": 3, "success": False, "evidence": {
+            "tier": "indicators", "verdict": False, "extracted": {},
+        }},
+    ]
+    layer = to_navigator_layer([r])
+    md = {entry["name"]: entry["value"] for entry in layer["techniques"][0]["metadata"]}
+    assert md["evidence_count"] == "3"
+    assert "openai_key" in md["top_extracted"]
+    assert "sk-test-abc" in md["top_extracted"]
+    assert "(2x)" in md["top_extracted"]
+
+
 def test_coverage_matrix_runs_without_results():
     """print_coverage_matrix must not crash when given an empty results list —
     it should render the catalog with all cells marked as 'atomic only'."""

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import json
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -224,15 +226,33 @@ async def run_atomic(
             try:
                 # PyRIT 0.13: execute_async takes objective + other params as
                 # direct kwargs, not wrapped in an AttackParameters object.
+                run_start = time.monotonic()
                 attack_result = await attack.execute_async(objective=objective)
+                run_duration_ms = int((time.monotonic() - run_start) * 1000)
                 success = attack_result.outcome == AttackOutcome.SUCCESS
                 detail["success"] = success
                 last_resp = attack_result.last_response
+                response_text = ""
                 if last_resp is not None:
                     try:
-                        detail["response_preview"] = str(last_resp)[:200]
+                        response_text = str(last_resp)
+                        detail["response_preview"] = response_text[:200]
                     except Exception:
                         detail["response_preview"] = ""
+
+                evidence = _evidence_from_score(attack_result.last_score)
+                if evidence is not None:
+                    evidence["attack_input"] = objective
+                    evidence["duration_ms"] = run_duration_ms
+                    if atomic.extractors and response_text:
+                        existing = evidence.get("extracted") or {}
+                        new_hits = _extract_artifacts(response_text, atomic.extractors)
+                        # Merge per-name hits without dropping anything either side has.
+                        for k, v in new_hits.items():
+                            existing.setdefault(k, []).extend(v)
+                        evidence["extracted"] = existing
+                    detail["evidence"] = evidence
+
                 if success:
                     result.successes += 1
                 else:
@@ -272,25 +292,8 @@ def _build_attack(
     """
     from pyrit.executor.attack.single_turn.prompt_sending import PromptSendingAttack
     from pyrit.executor.attack.core.attack_config import AttackScoringConfig
-    from pyrit.score import SubStringScorer
-    from .scorers import IndicatorScorer
 
-    indicators = atomic.success_indicators
-    if indicators:
-        # Preferred path: explicit any-of-N indicator matching.
-        scorer = IndicatorScorer.build(
-            indicators=indicators,
-            categories=[atomic.atlas_technique],
-        )
-    else:
-        # Legacy fallback: extract a single line from the success-criteria
-        # prose and feed it to PyRIT's SubStringScorer. Brittle but kept for
-        # backwards compatibility while atomics get backfilled with
-        # explicit success_indicators.
-        scorer = SubStringScorer(
-            substring=_success_substring(atomic),
-            categories=[atomic.atlas_technique],
-        )
+    scorer = _select_scorer(atomic, profile)
     scoring_config = AttackScoringConfig(objective_scorer=scorer)
 
     name = atomic.pyrit_orchestrator
@@ -400,6 +403,161 @@ def _success_substring(atomic: AtomicTest) -> str:
 def _attack_strategy(atomic: AtomicTest) -> str:
     strategy = atomic.section("Attack strategy")
     return strategy or f"Demonstrate that the ATLAS technique {atomic.atlas_technique} succeeds via {atomic.interaction_vector}."
+
+
+def _judge_available() -> bool:
+    """True when the runner can construct an LLM judge.
+
+    Requires a real (non-placeholder) ``OPENAI_API_KEY`` and
+    ``ATOMIC_ATLAS_NO_ATTACKER_LLM`` not set to ``"1"``. The same
+    conditions that gate ``RedTeamingAttack``'s attacker LLM apply here —
+    the judge talks to the same provider.
+    """
+    if os.environ.get("ATOMIC_ATLAS_NO_ATTACKER_LLM") == "1":
+        return False
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if not key:
+        return False
+    return key.lower() not in _PLACEHOLDER_API_KEYS
+
+
+def _select_scorer(atomic: AtomicTest, profile: dict[str, Any] | None = None):
+    """Pick the right scorer tier for an atomic.
+
+    Selection (highest precedence first):
+
+    1. Per-atomic ``scoring.strategy`` frontmatter override.
+    2. ``ATOMIC_ATLAS_SCORING`` env override (``judge`` | ``indicators`` |
+       ``substring``).
+    3. Auto: judge wins if ``_judge_available()`` and the atomic has
+       ``## Success criteria`` prose. Else indicators if
+       ``success_indicators`` is set. Else legacy ``SubStringScorer``.
+
+    The chosen scorer is wrapped in a refusal short-circuit (cheap mode by
+    default; opt out via ``scoring.refusal_check: off``).
+    """
+    from pyrit.score import SubStringScorer
+    from .scorers import (
+        IndicatorScorer,
+        LLMJudgeScorer,
+        build_refusal_short_circuit,
+    )
+
+    scoring_cfg = atomic.scoring or {}
+    strategy = (scoring_cfg.get("strategy") or os.environ.get("ATOMIC_ATLAS_SCORING") or "auto").lower()
+    refusal_mode = (scoring_cfg.get("refusal_check") or "cheap").lower()
+
+    success_criteria = atomic.section("Success criteria").strip()
+
+    if strategy == "auto":
+        if _judge_available() and success_criteria:
+            strategy = "judge"
+        elif atomic.success_indicators:
+            strategy = "indicators"
+        else:
+            strategy = "substring"
+
+    if strategy == "judge":
+        if not success_criteria:
+            raise ValueError(
+                f"Atomic {atomic.atlas_technique} requested judge scoring but "
+                f"has no '## Success criteria' section."
+            )
+        primary = LLMJudgeScorer.build(
+            success_criteria=success_criteria,
+            atlas_technique=atomic.atlas_technique,
+            guid=atomic.guid,
+            success_indicators=atomic.success_indicators,
+            judge_guidance=atomic.judge_guidance,
+            judge_examples=atomic.judge_examples,
+            judge_model=scoring_cfg.get("judge_model"),
+        )
+    elif strategy == "indicators":
+        if not atomic.success_indicators:
+            raise ValueError(
+                f"Atomic {atomic.atlas_technique} requested indicators scoring "
+                f"but has no success_indicators in frontmatter."
+            )
+        primary = IndicatorScorer.build(
+            indicators=atomic.success_indicators,
+            categories=[atomic.atlas_technique],
+        )
+    elif strategy == "substring":
+        _log.warning(
+            "Atomic %s using legacy SubStringScorer fallback; backfill with "
+            "success_indicators or '## Success criteria' + an OPENAI_API_KEY "
+            "to upgrade. Legacy fallback removed in v0.3.",
+            atomic.atlas_technique,
+        )
+        primary = SubStringScorer(
+            substring=_success_substring(atomic),
+            categories=[atomic.atlas_technique],
+        )
+    else:
+        raise ValueError(
+            f"Unknown scoring strategy {strategy!r} for atomic "
+            f"{atomic.atlas_technique}. Expected: auto | judge | indicators | "
+            f"substring | composite."
+        )
+
+    return build_refusal_short_circuit(
+        primary=primary,
+        mode=refusal_mode,
+        categories=[atomic.atlas_technique],
+    )
+
+
+def _extract_artifacts(
+    response_text: str,
+    extractors: list[dict[str, str]] | None,
+) -> dict[str, list[str]]:
+    """Run regex extractors against the response and collect matches.
+
+    Returns a dict ``{name: [matches]}``. Each pattern is compiled
+    case-insensitively against the response text. If a pattern fails to
+    compile or yields no matches, the key is omitted. Capture groups, if
+    present, win over the full-match string — supports patterns like
+    ``Bearer\\s+(\\S+)`` to grab just the token.
+    """
+    if not extractors or not response_text:
+        return {}
+    out: dict[str, list[str]] = {}
+    for entry in extractors:
+        name = entry.get("name")
+        pattern = entry.get("pattern")
+        if not name or not pattern:
+            continue
+        try:
+            compiled = re.compile(pattern, re.IGNORECASE | re.MULTILINE)
+        except re.error as exc:
+            _log.warning("Extractor %r has invalid regex %r: %s", name, pattern, exc)
+            continue
+        hits: list[str] = []
+        for m in compiled.finditer(response_text):
+            if m.groups():
+                hits.append(m.group(1))
+            else:
+                hits.append(m.group(0))
+        if hits:
+            out[name] = hits
+    return out
+
+
+def _evidence_from_score(score) -> dict[str, Any] | None:
+    """Pull our Evidence dict back out of PyRIT's Score.score_metadata.
+
+    Returns the deserialized dict or None if no evidence was attached.
+    """
+    if score is None:
+        return None
+    metadata = getattr(score, "score_metadata", None) or {}
+    raw = metadata.get("evidence") if isinstance(metadata, dict) else None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw) if isinstance(raw, str) else raw
+    except (TypeError, ValueError):
+        return None
 
 
 def _default_red_team_chat(target_context: dict[str, Any] | None = None):
