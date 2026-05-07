@@ -165,19 +165,38 @@ Override the auto-selection per atomic via `scoring: { strategy: indicators }` (
 
 ## Step 6 — report
 
+Every `exec` and `runbook exec` automatically appends a timestamped entry to `./atomic-atlas-engagement/results.jsonl` (override location with `--engagement DIR` or `ATOMIC_ATLAS_ENGAGEMENT_DIR` in `.env`). After running a few atomics, render the engagement-level report:
+
 ```bash
-# Coverage matrix (terminal)
-atomic-atlas report --input results.json --format coverage
+# Stakeholder-facing engagement report — one Finding per (atomic × target),
+# with verdict (VULNERABLE / PARTIALLY_VULNERABLE / NOT_VULNERABLE / INCONCLUSIVE),
+# severity, summary, evidence, and ATLAS mitigations.
+atomic-atlas report --format findings --output engagement.md
 
-# Markdown report (terminal or file) — renders per-run evidence inline:
-# tier, matched indicators, judge reasoning, extracted credentials.
-atomic-atlas report --input results.json --format markdown
+# Filter to one target or a time window
+atomic-atlas report --format findings --target dvaa_legacybot
+atomic-atlas report --format findings --since 2026-05-05
 
-# ATLAS Navigator layer JSON
-atomic-atlas report --input results.json --format navigator --output dvaa.layer.json
+# Other formats (also default to engagement source — no --input needed)
+atomic-atlas report --format navigator --output dvaa.layer.json
+atomic-atlas report --format coverage
+atomic-atlas report --format markdown          # per-run detail view
 ```
 
 Open [the ATLAS Navigator](https://mitre-atlas.github.io/atlas-navigator/) → "Open Existing Layer" → "Upload from local" → pick `dvaa.layer.json`. You will see your tested techniques color-coded by success rate.
+
+**The engagement directory's structure** (auto-created on first write):
+
+```
+atomic-atlas-engagement/
+  results.jsonl           # one JSON object per atomic run
+  runbook-results.jsonl   # one JSON object per runbook step
+  adapted-payloads/       # bundles produced by `adapt --output`
+  recon/                  # outputs of `recon` (if you save them here)
+  reports/                # rendered findings / navigator / markdown
+```
+
+Each JSONL line is stamped with `engagement_id`, `recorded_at`, `target_id`, `atomic_path`, plus the full RunResult. `jq`-friendly. One folder per customer / scope is the natural pattern. See [`docs/cli-reference.md`](cli-reference.md#report) for full filter syntax.
 
 ## Step 7a (optional) — generate a target-tuned payload with `adapt`
 
