@@ -183,7 +183,7 @@ atomic-atlas exec AML.T0083/direct_chat \
   --runs 3 --authorized --hitl
 
 # Force deterministic / no-LLM scoring (offline or untrusted-target runs).
-ATOMIC_ATLAS_NO_ATTACKER_LLM=1 ATOMIC_ATLAS_SCORING=indicators \
+ATOMIC_ATLAS_OFFLINE=1 \
 atomic-atlas exec AML.T0083/direct_chat \
   --target http://localhost:7003/v1 \
   --profile targets/dvaa_legacybot.yaml \
@@ -196,9 +196,8 @@ Useful environment variables:
 |---|---|
 | `OPENAI_API_KEY` | Required for the LLM judge tier and for `RedTeamingOrchestrator`'s attacker LLM. |
 | `OPENAI_API_BASE` | OpenAI-compatible proxy (LiteLLM, vLLM). |
-| `ATOMIC_ATLAS_ATTACKER_MODEL` | Attacker-LLM model (default `gpt-4o`). |
-| `ATOMIC_ATLAS_NO_ATTACKER_LLM=1` | Disable both attacker LLM and judge — forces deterministic scoring. |
-| `ATOMIC_ATLAS_SCORING` | Force scorer tier: `judge` / `indicators` / `substring`. |
+| `ATOMIC_ATLAS_LLM_MODEL` | LLM model name used by the judge, attacker, and adapter (default `gpt-4o`). |
+| `ATOMIC_ATLAS_OFFLINE=1` | Disable every LLM call site (judge tier, attacker LLM, adapter). Forces deterministic indicator scoring + `PromptSendingAttack`. |
 
 A few additional vars exist for tests / development (`ATOMIC_ATLAS_ATOMICS_DIR`, `ATOMIC_ATLAS_SKIP_DOTENV`, `ATOMIC_ATLAS_PYRIT_DB`, `ATOMIC_ATLAS_EVIDENCE_SNIPPET_MAX`); they're stable but not part of the operator surface.
 

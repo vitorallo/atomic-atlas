@@ -96,8 +96,4 @@ def test_truncate_snippet_invalid_env_falls_back_to_default(monkeypatch):
 
 
 def test_scorer_tiers_constant():
-    assert "judge" in SCORER_TIERS
-    assert "indicators" in SCORER_TIERS
-    assert "substring" in SCORER_TIERS
-    assert "composite" in SCORER_TIERS
-    assert "refusal_short_circuit" in SCORER_TIERS
+    assert SCORER_TIERS == {"judge", "indicators", "refusal_short_circuit"}

@@ -40,7 +40,7 @@ class AtomicTest:
     seed_prompt: str | None = None  # optional concrete attack-string used as objective
     judge_guidance: str | None = None  # prose hint prepended to LLM judge true_description
     judge_examples: list[dict[str, str]] | None = None  # {response, verdict, reason} triples
-    scoring: dict[str, Any] | None = None  # scoring strategy / refusal_check / judge_model
+    scoring: dict[str, Any] | None = None  # scoring.strategy / refusal / judge_model
     extractors: list[dict[str, str]] | None = None  # [{name, pattern}] regex extractors
 
     @property

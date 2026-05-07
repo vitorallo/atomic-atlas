@@ -77,10 +77,8 @@ def test_scoring_field_round_trip(tmp_path):
         "interaction_vector: direct_chat\n"
         "guid: 11111111-1111-4111-8111-111111111111\n"
         "scoring:\n"
-        "  strategy: composite\n"
-        "  scorers: [judge, indicators]\n"
-        "  aggregator: OR\n"
-        "  refusal_check: cheap\n"
+        "  strategy: judge\n"
+        "  refusal: true\n"
         "  judge_model: gpt-4o-mini\n"
         "---\n"
         "# Test\n"
@@ -89,9 +87,7 @@ def test_scoring_field_round_trip(tmp_path):
     p.write_text(body)
     a = load(p)
     assert a.scoring == {
-        "strategy": "composite",
-        "scorers": ["judge", "indicators"],
-        "aggregator": "OR",
-        "refusal_check": "cheap",
+        "strategy": "judge",
+        "refusal": True,
         "judge_model": "gpt-4o-mini",
     }

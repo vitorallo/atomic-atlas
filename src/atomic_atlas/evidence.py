@@ -22,8 +22,6 @@ from typing import Any
 SCORER_TIERS: frozenset[str] = frozenset({
     "judge",
     "indicators",
-    "substring",
-    "composite",
     "refusal_short_circuit",
 })
 

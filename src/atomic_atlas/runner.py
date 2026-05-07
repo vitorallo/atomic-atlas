@@ -19,9 +19,11 @@ from .parser import AtomicTest, load
 
 _log = logging.getLogger(__name__)
 
-# Strings treated as "no real OpenAI API key". The empty string is handled
-# separately by the truthiness short-circuit in callers.
-_PLACEHOLDER_API_KEYS = frozenset({"unused", "none", "null"})
+from .llm import (
+    chat_target as _llm_chat_target,
+    has_api_key as _llm_has_api_key,
+    is_offline as _llm_is_offline,
+)
 from .targets.base import (
     AtomicAtlasTarget,
     PYRIT_AVAILABLE,
@@ -303,29 +305,28 @@ def _build_attack(
             attack_scoring_config=scoring_config,
         )
     if name in ("RedTeamingOrchestrator", "RedTeamingAttack"):
-        # When ATOMIC_ATLAS_NO_ATTACKER_LLM=1, force PromptSendingAttack
-        # regardless of the atomic's tag. Useful for offline / no-API-key
-        # environments and for test runs where you don't want the attacker
-        # LLM (which talks to api.openai.com or your configured proxy)
-        # to interfere with verifying the target side.
+        # The attacker LLM needs a real OPENAI_API_KEY (and ATOMIC_ATLAS_OFFLINE
+        # not set). Otherwise fall back to PromptSendingAttack so the run still
+        # executes — without multi-turn mutation but otherwise honest.
         prompt_sending = lambda: PromptSendingAttack(
             objective_target=target,
             attack_scoring_config=scoring_config,
         )
-        if os.environ.get("ATOMIC_ATLAS_NO_ATTACKER_LLM") == "1":
-            return prompt_sending()
-        attacker_api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not attacker_api_key or attacker_api_key.lower() in _PLACEHOLDER_API_KEYS:
-            # Without this guard we'd silently construct an attacker LLM
-            # with api_key="unused"; failure would surface only at
-            # execute_async time as a misleading 401 from api.openai.com.
-            _log.warning(
-                "OPENAI_API_KEY missing or placeholder; falling back to "
-                "PromptSendingAttack for atomic %s. Set a real key, point "
-                "OPENAI_API_BASE at a LiteLLM-style proxy, or set "
-                "ATOMIC_ATLAS_NO_ATTACKER_LLM=1 to silence this warning.",
-                atomic.atlas_technique,
-            )
+        if not _llm_has_api_key():
+            if _llm_is_offline():
+                # Operator explicitly opted out — log at info level, not warning.
+                _log.info(
+                    "ATOMIC_ATLAS_OFFLINE=1; using PromptSendingAttack for atomic %s",
+                    atomic.atlas_technique,
+                )
+            else:
+                _log.warning(
+                    "OPENAI_API_KEY missing or placeholder; falling back to "
+                    "PromptSendingAttack for atomic %s. Set a real key, point "
+                    "OPENAI_API_BASE at a LiteLLM-style proxy, or set "
+                    "ATOMIC_ATLAS_OFFLINE=1 to silence this warning.",
+                    atomic.atlas_technique,
+                )
             return prompt_sending()
         # Try to build an actual RedTeamingAttack with AttackAdversarialConfig.
         # Falls back to PromptSendingAttack only if the attacker LLM cannot be
@@ -408,35 +409,31 @@ def _attack_strategy(atomic: AtomicTest) -> str:
 def _judge_available() -> bool:
     """True when the runner can construct an LLM judge.
 
-    Requires a real (non-placeholder) ``OPENAI_API_KEY`` and
-    ``ATOMIC_ATLAS_NO_ATTACKER_LLM`` not set to ``"1"``. The same
-    conditions that gate ``RedTeamingAttack``'s attacker LLM apply here —
-    the judge talks to the same provider.
+    Returns False when ``ATOMIC_ATLAS_OFFLINE=1`` is set or no real
+    ``OPENAI_API_KEY`` is configured. The same gate the attacker LLM
+    uses — the judge talks to the same provider.
     """
-    if os.environ.get("ATOMIC_ATLAS_NO_ATTACKER_LLM") == "1":
-        return False
-    key = os.environ.get("OPENAI_API_KEY", "")
-    if not key:
-        return False
-    return key.lower() not in _PLACEHOLDER_API_KEYS
+    return _llm_has_api_key()
 
 
 def _select_scorer(atomic: AtomicTest, profile: dict[str, Any] | None = None):
     """Pick the right scorer tier for an atomic.
 
-    Selection (highest precedence first):
+    Two tiers: judge (LLM, default when an API key is available) and
+    indicators (any-of-N substring match; the deterministic fallback).
 
-    1. Per-atomic ``scoring.strategy`` frontmatter override.
-    2. ``ATOMIC_ATLAS_SCORING`` env override (``judge`` | ``indicators`` |
-       ``substring``).
-    3. Auto: judge wins if ``_judge_available()`` and the atomic has
-       ``## Success criteria`` prose. Else indicators if
-       ``success_indicators`` is set. Else legacy ``SubStringScorer``.
+    Selection:
 
-    The chosen scorer is wrapped in a refusal short-circuit (cheap mode by
-    default; opt out via ``scoring.refusal_check: off``).
+    1. Per-atomic ``scoring.strategy`` frontmatter override (``auto`` |
+       ``judge`` | ``indicators``). Default ``auto``.
+    2. Auto: judge wins if ``_judge_available()`` and the atomic has
+       ``## Success criteria`` prose. Else indicators (using
+       ``success_indicators`` if present, otherwise a single substring
+       derived from the criteria text).
+
+    The primary scorer is wrapped in a cheap (substring-based) refusal
+    short-circuit. Opt out per-atomic with ``scoring.refusal: false``.
     """
-    from pyrit.score import SubStringScorer
     from .scorers import (
         IndicatorScorer,
         LLMJudgeScorer,
@@ -444,18 +441,13 @@ def _select_scorer(atomic: AtomicTest, profile: dict[str, Any] | None = None):
     )
 
     scoring_cfg = atomic.scoring or {}
-    strategy = (scoring_cfg.get("strategy") or os.environ.get("ATOMIC_ATLAS_SCORING") or "auto").lower()
-    refusal_mode = (scoring_cfg.get("refusal_check") or "cheap").lower()
+    strategy = (scoring_cfg.get("strategy") or "auto").lower()
+    refusal = scoring_cfg.get("refusal", True)
 
     success_criteria = atomic.section("Success criteria").strip()
 
     if strategy == "auto":
-        if _judge_available() and success_criteria:
-            strategy = "judge"
-        elif atomic.success_indicators:
-            strategy = "indicators"
-        else:
-            strategy = "substring"
+        strategy = "judge" if (_judge_available() and success_criteria) else "indicators"
 
     if strategy == "judge":
         if not success_criteria:
@@ -473,36 +465,20 @@ def _select_scorer(atomic: AtomicTest, profile: dict[str, Any] | None = None):
             judge_model=scoring_cfg.get("judge_model"),
         )
     elif strategy == "indicators":
-        if not atomic.success_indicators:
-            raise ValueError(
-                f"Atomic {atomic.atlas_technique} requested indicators scoring "
-                f"but has no success_indicators in frontmatter."
-            )
+        indicators = atomic.success_indicators or [_success_substring(atomic)]
         primary = IndicatorScorer.build(
-            indicators=atomic.success_indicators,
-            categories=[atomic.atlas_technique],
-        )
-    elif strategy == "substring":
-        _log.warning(
-            "Atomic %s using legacy SubStringScorer fallback; backfill with "
-            "success_indicators or '## Success criteria' + an OPENAI_API_KEY "
-            "to upgrade. Legacy fallback removed in v0.3.",
-            atomic.atlas_technique,
-        )
-        primary = SubStringScorer(
-            substring=_success_substring(atomic),
+            indicators=indicators,
             categories=[atomic.atlas_technique],
         )
     else:
         raise ValueError(
             f"Unknown scoring strategy {strategy!r} for atomic "
-            f"{atomic.atlas_technique}. Expected: auto | judge | indicators | "
-            f"substring | composite."
+            f"{atomic.atlas_technique}. Expected: auto | judge | indicators."
         )
 
     return build_refusal_short_circuit(
         primary=primary,
-        mode=refusal_mode,
+        enabled=bool(refusal),
         categories=[atomic.atlas_technique],
     )
 
@@ -563,30 +539,11 @@ def _evidence_from_score(score) -> dict[str, Any] | None:
 def _default_red_team_chat(target_context: dict[str, Any] | None = None):
     """Build the attacker LLM target used by RedTeamingAttack.
 
-    Configured via env:
-
-    - ``ATOMIC_ATLAS_ATTACKER_MODEL`` — model / deployment name (default
-      ``gpt-4o``).
-    - ``OPENAI_API_BASE`` — endpoint (default ``https://api.openai.com/v1``).
-    - ``OPENAI_API_KEY`` — API key.
-
-    When ``target_context`` is provided, its contents are formatted into a
-    context block that callers prepend to the atomic's attack-strategy text
-    (see ``_build_attacker_system_prompt``). This is how
-    ``target_context`` from the target profile reaches the attacker LLM and
-    makes its variants domain-aware.
-
-    To drive the attacker from a non-OpenAI provider (Anthropic, Bedrock,
-    Ollama, etc.), point ``OPENAI_API_BASE`` at an OpenAI-compatible proxy
-    like LiteLLM or vLLM. PyRIT 0.13 does not ship a first-class Anthropic
-    target; the LiteLLM proxy is the recommended interop path until it does.
+    ``target_context`` reaches the attacker LLM via the system prompt
+    (see ``_build_attacker_system_prompt``); this function just builds
+    the chat target itself. Configuration goes through ``llm.chat_target``.
     """
-    from pyrit.prompt_target import OpenAIChatTarget
-    return OpenAIChatTarget(
-        model_name=os.environ.get("ATOMIC_ATLAS_ATTACKER_MODEL", "gpt-4o"),
-        endpoint=os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"),
-        api_key=os.environ.get("OPENAI_API_KEY", "unused"),
-    )
+    return _llm_chat_target()
 
 
 def _format_target_context(target_context: dict[str, Any] | None) -> str:

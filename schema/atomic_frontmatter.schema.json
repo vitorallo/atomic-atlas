@@ -135,11 +135,10 @@
           "default": "OR",
           "description": "How to combine child scorer verdicts in composite strategy."
         },
-        "refusal_check": {
-          "type": "string",
-          "enum": ["off", "cheap", "llm"],
-          "default": "cheap",
-          "description": "Refusal short-circuit mode. 'cheap' = substring of curated refusal phrases (no LLM call). 'llm' = pyrit.score.SelfAskRefusalScorer (one extra LLM call). 'off' disables."
+        "refusal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Refusal short-circuit. When true (default), a curated refusal-phrase substring detector runs before the primary scorer; if it fires the verdict is False without a judge call. Set false to disable."
         },
         "judge_model": {
           "type": "string",

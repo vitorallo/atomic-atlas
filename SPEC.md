@@ -58,7 +58,7 @@ extractors:                                 # OPTIONAL: regex artifact capture i
   - { name: openai_api_key, pattern: "sk-[A-Za-z0-9_\\-]{16,}" }
 scoring:                                    # OPTIONAL: override auto-selected tier
   strategy: judge                           # auto | judge | indicators | substring | composite
-  refusal_check: cheap                      # off | cheap | llm
+  refusal: true                             # cheap substring refusal short-circuit; default true
 ---
 ```
 
@@ -226,7 +226,7 @@ Every run is evaluated by a three-tier scorer stack with auto-fallback:
 2. **`IndicatorScorer`** — any-of-N case-insensitive substring match over `success_indicators`. Default when no judge is available; explicit override via `scoring.strategy: indicators`.
 3. **Legacy `SubStringScorer`** — single substring extracted from `## Success criteria` prose. Logs a deprecation warning; v0.3 removal.
 
-A **refusal short-circuit** wraps each primary scorer (cheap substring detector by default; LLM mode opt-in via `scoring.refusal_check: llm`).
+A **refusal short-circuit** wraps each primary scorer — cheap substring detector that fires before the primary, saving the judge call when the agent obviously refuses. Opt out per-atomic with `scoring.refusal: false`.
 
 Every score emits a structured `Evidence` payload (`tier`, `verdict`, `matched_against`, `attack_input`, `rationale`, `matched_indicators`, `judge_reasoning`, `judge_model`, `refusal_short_circuited`, `extracted`, `duration_ms`) through PyRIT's `Score.score_metadata` channel. Evidence flows into `results.json`, runbook step results, the markdown report, and the ATLAS Navigator layer's per-technique metadata (`evidence_count`, `top_extracted`).
 

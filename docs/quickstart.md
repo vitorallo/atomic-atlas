@@ -160,7 +160,7 @@ atomic-atlas exec AML.T0083/direct_chat \
 
 Against LegacyBot the regex extractors harvest the actual leaked credentials (`sk-dvaa-openai-test-key-…`, `dvaa-admin-secret`) into `evidence.extracted` — verdict + the artifacts in one pass.
 
-Override the auto-selection per atomic via `scoring: { strategy: indicators }` (skip judge cost when indicators are deterministic ground truth) or globally via `ATOMIC_ATLAS_SCORING=indicators`. Full authoring guide: [`docs/scoring.md`](scoring.md).
+Override the auto-selection per atomic via `scoring: { strategy: indicators }` (skip judge cost when indicators are deterministic ground truth) or globally via `ATOMIC_ATLAS_OFFLINE=1` (disables every LLM call site). Full authoring guide: [`docs/scoring.md`](scoring.md).
 
 ## Step 6 — report
 

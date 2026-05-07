@@ -446,16 +446,12 @@ async def adapt(
 
     ``chat_target`` is injectable for tests; it must be an object exposing
     an async ``complete(system, user, model)`` method that returns the raw
-    LLM text. When ``None``, we build a default OpenAI chat client from
-    the same env vars the rest of atomic-atlas uses
-    (``OPENAI_API_KEY`` / ``OPENAI_API_BASE`` / ``ATOMIC_ATLAS_ADAPTER_MODEL``).
+    LLM text. When ``None``, the call is delegated to ``llm.complete`` —
+    same env-var convention as the rest of atomic-atlas
+    (``OPENAI_API_KEY`` / ``OPENAI_API_BASE`` / ``ATOMIC_ATLAS_LLM_MODEL``).
     """
-    model = (
-        model
-        or os.environ.get("ATOMIC_ATLAS_ADAPTER_MODEL")
-        or os.environ.get("ATOMIC_ATLAS_ATTACKER_MODEL")
-        or _DEFAULT_GENERATOR_MODEL
-    )
+    from .llm import resolve_model
+    model = resolve_model(model)
 
     selected_observed = _select_observed(
         observed or [],
@@ -513,38 +509,13 @@ async def adapt(
 
 
 class _DefaultOpenAIClient:
-    """Single-shot async chat-completion via the openai SDK.
+    """Adapter shim that forwards to ``llm.complete``.
 
-    Honors the same env vars as the rest of atomic-atlas
-    (``OPENAI_API_KEY``, ``OPENAI_API_BASE``). No retries beyond what the
-    SDK provides natively — if the provider rate-limits, we fail loudly
-    so the operator knows.
+    Kept as a class (not just a function) so tests can inject a fake
+    ``chat_target`` with the same shape — pass any object with an async
+    ``complete(system, user, model)`` method to ``adapt(...)``.
     """
 
     async def complete(self, *, system: str, user: str, model: str) -> str:
-        from openai import AsyncOpenAI
-
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key or api_key.lower() in {"unused", "none", "null"}:
-            raise RuntimeError(
-                "OPENAI_API_KEY missing or placeholder; cannot run "
-                "atomic-atlas adapt. Set a real key, or point "
-                "OPENAI_API_BASE at a LiteLLM-style proxy."
-            )
-        client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=os.environ.get("OPENAI_API_BASE"),
-        )
-        response = await client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-        )
-        if not response.choices or not response.choices[0].message.content:
-            raise RuntimeError(
-                "Adapter LLM returned an empty response — provider may have "
-                "filtered the request or returned an error."
-            )
-        return response.choices[0].message.content
+        from .llm import complete
+        return await complete(system=system, user=user, model=model)
