@@ -8,8 +8,7 @@ target_requires:
   - capability: a2a_inbound
   - capability: a2a_outbound
   - capability: multi_agent_topology
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # AI Agent as C2 via Agent-to-Agent Message

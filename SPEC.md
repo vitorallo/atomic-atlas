@@ -40,11 +40,11 @@ runs: 5                                  # OPTIONAL: default 5
 target_requires:                         # OPTIONAL: capabilities the target must expose
   - capability: rag_retrieval
   - capability: outbound_http_tool
-pyrit_orchestrator: RedTeamingOrchestrator  # OPTIONAL: default PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer               # OPTIONAL: legacy hint; the runner picks
-                                            # the scorer tier automatically (judge >
-                                            # indicators > legacy SubStringScorer).
-                                            # See "Scoring tiers + evidence" below.
+multi_turn: true                            # OPTIONAL: default true. When true and an
+                                            # OPENAI_API_KEY is set, exec uses
+                                            # RedTeamingAttack (attacker LLM mutates the
+                                            # seed across turns). false = single-turn
+                                            # PromptSendingAttack.
 success_indicators:                         # OPTIONAL: any-of-N substrings; powers the
   - sk-                                     # IndicatorScorer fallback when no judge
   - Bearer                                  # is reachable. Also surfaced to the judge
@@ -57,7 +57,7 @@ judge_examples:                             # OPTIONAL: concrete pass/fail examp
 extractors:                                 # OPTIONAL: regex artifact capture into evidence.extracted
   - { name: openai_api_key, pattern: "sk-[A-Za-z0-9_\\-]{16,}" }
 scoring:                                    # OPTIONAL: override auto-selected tier
-  strategy: judge                           # auto | judge | indicators | substring | composite
+  strategy: judge                           # auto | judge | indicators
   refusal: true                             # cheap substring refusal short-circuit; default true
 ---
 ```
@@ -194,7 +194,7 @@ Atomic-atlas payload seeds (`atomics/<technique>/payloads/*.md` and `*.json`) in
 
 The adaptation mechanism:
 
-1. **`RedTeamingAttack` runs an attacker LLM** that mutates the seed across runs and observes responses. Atomics tagged `pyrit_orchestrator: RedTeamingOrchestrator` use this path.
+1. **`RedTeamingAttack` runs an attacker LLM** that mutates the seed across runs and observes responses. Atomics with `multi_turn: true` (the default) use this path when an `OPENAI_API_KEY` is set.
 2. **`target_context`** in the target profile gives the attacker LLM domain awareness:
 
    ```yaml

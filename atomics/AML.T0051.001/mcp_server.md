@@ -6,8 +6,7 @@ guid: 7a1b3c5d-2e4f-4d8a-b9c0-1f2e3d4a5b6c
 runs: 5
 target_requires:
   - capability: mcp_tool_use
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Indirect Prompt Injection via MCP Server Tool Description

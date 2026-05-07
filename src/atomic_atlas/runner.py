@@ -282,15 +282,14 @@ def _build_attack(
 ):
     """Instantiate the PyRIT 0.13 attack class for an atomic.
 
-    PyRIT 0.13 reorganized orchestrators into the ``executor.attack`` module
-    and renamed them: ``PromptSendingOrchestrator`` → ``PromptSendingAttack``,
-    ``RedTeamingOrchestrator`` → ``RedTeamingAttack``. The atomic's
-    ``pyrit_orchestrator`` frontmatter field still uses the legacy names for
-    schema continuity; this function maps them to the new classes.
+    Atomic frontmatter has a single ``multi_turn`` boolean (default true).
+    When true and an attacker LLM is reachable, we use ``RedTeamingAttack``
+    so the LLM mutates the seed across turns; otherwise we use
+    ``PromptSendingAttack`` for a deterministic single-turn send.
 
-    When ``profile`` includes a ``target_context`` block and the atomic is
-    tagged ``RedTeamingOrchestrator``, the attacker LLM's system prompt is
-    enriched with the context so its mutations are domain-aware.
+    When ``profile`` includes a ``target_context`` block, the attacker
+    LLM's system prompt is enriched with the context so its mutations are
+    domain-aware.
     """
     from pyrit.executor.attack.single_turn.prompt_sending import PromptSendingAttack
     from pyrit.executor.attack.core.attack_config import AttackScoringConfig
@@ -298,92 +297,81 @@ def _build_attack(
     scorer = _select_scorer(atomic, profile)
     scoring_config = AttackScoringConfig(objective_scorer=scorer)
 
-    name = atomic.pyrit_orchestrator
-    if name in ("PromptSendingOrchestrator", "PromptSendingAttack"):
-        return PromptSendingAttack(
-            objective_target=target,
-            attack_scoring_config=scoring_config,
-        )
-    if name in ("RedTeamingOrchestrator", "RedTeamingAttack"):
-        # The attacker LLM needs a real OPENAI_API_KEY (and ATOMIC_ATLAS_OFFLINE
-        # not set). Otherwise fall back to PromptSendingAttack so the run still
-        # executes — without multi-turn mutation but otherwise honest.
-        prompt_sending = lambda: PromptSendingAttack(
-            objective_target=target,
-            attack_scoring_config=scoring_config,
-        )
-        if not _llm_has_api_key():
-            if _llm_is_offline():
-                # Operator explicitly opted out — log at info level, not warning.
-                _log.info(
-                    "ATOMIC_ATLAS_OFFLINE=1; using PromptSendingAttack for atomic %s",
-                    atomic.atlas_technique,
-                )
-            else:
-                _log.warning(
-                    "OPENAI_API_KEY missing or placeholder; falling back to "
-                    "PromptSendingAttack for atomic %s. Set a real key, point "
-                    "OPENAI_API_BASE at a LiteLLM-style proxy, or set "
-                    "ATOMIC_ATLAS_OFFLINE=1 to silence this warning.",
-                    atomic.atlas_technique,
-                )
-            return prompt_sending()
-        # Try to build an actual RedTeamingAttack with AttackAdversarialConfig.
-        # Falls back to PromptSendingAttack only if the attacker LLM cannot be
-        # constructed (e.g., missing API key in the env) — explicit, with a
-        # warning, so the operator knows adaptation isn't running.
-        target_context = (profile or {}).get("target_context") or {}
-        try:
-            from pyrit.executor.attack.multi_turn.red_teaming import RedTeamingAttack
-            from pyrit.executor.attack.core.attack_config import AttackAdversarialConfig
-            import tempfile
-            import yaml as _yaml
+    prompt_sending = lambda: PromptSendingAttack(
+        objective_target=target,
+        attack_scoring_config=scoring_config,
+    )
 
-            attacker_target = _default_red_team_chat(target_context=target_context)
-            system_prompt = _build_attacker_system_prompt(atomic, target_context)
-            # PyRIT 0.13's AttackAdversarialConfig takes a system_prompt_path
-            # (file path) in PyRIT's SeedPrompt YAML format, not a plain text
-            # file. Materialize the composed prompt into a YAML envelope so
-            # the attacker LLM picks up the target-context-aware framing.
-            seed_prompt_yaml = {
-                "name": f"atomic-atlas attacker prompt for {atomic.atlas_technique}",
-                "description": "Attacker LLM system prompt composed from the atomic's strategy and the target_context.",
-                "authors": ["atomic-atlas"],
-                # PyRIT's RedTeamingAttack validates that the seed prompt
-                # template declares 'objective' as a required parameter.
-                "parameters": ["objective"],
-                "data_type": "text",
-                "value": system_prompt,
-            }
-            tmp = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".yaml", delete=False, encoding="utf-8"
-            )
-            _yaml.safe_dump(seed_prompt_yaml, tmp, sort_keys=False)
-            tmp.close()
-            adversarial_config = AttackAdversarialConfig(
-                target=attacker_target,
-                system_prompt_path=tmp.name,
-            )
-            return RedTeamingAttack(
-                objective_target=target,
-                attack_adversarial_config=adversarial_config,
-                attack_scoring_config=scoring_config,
-            )
-        except Exception as exc:
-            # Soft fallback — attacker LLM unavailable, proceed without it.
-            # The atomic still runs (one-shot via the seed objective), but
-            # multi-turn mutation is not happening this run.
-            _log.warning(
-                "RedTeamingAttack unavailable (%s); falling back to "
-                "PromptSendingAttack for atomic %s",
-                exc,
+    # Single-turn atomics (multi_turn=false) always use PromptSendingAttack —
+    # the payload is sent verbatim, no attacker-LLM mutation. Multi-turn
+    # atomics (default) want RedTeamingAttack but require a real OPENAI_API_KEY;
+    # fall back to PromptSendingAttack when no key (or ATOMIC_ATLAS_OFFLINE=1).
+    if not atomic.multi_turn:
+        return prompt_sending()
+    if not _llm_has_api_key():
+        if _llm_is_offline():
+            _log.info(
+                "ATOMIC_ATLAS_OFFLINE=1; using PromptSendingAttack for atomic %s",
                 atomic.atlas_technique,
             )
-            return PromptSendingAttack(
-                objective_target=target,
-                attack_scoring_config=scoring_config,
+        else:
+            _log.warning(
+                "OPENAI_API_KEY missing or placeholder; falling back to "
+                "PromptSendingAttack for multi-turn atomic %s. Set a real "
+                "key or point OPENAI_API_BASE at a LiteLLM-style proxy, or "
+                "set ATOMIC_ATLAS_OFFLINE=1 to silence this warning.",
+                atomic.atlas_technique,
             )
-    raise ValueError(f"Unsupported orchestrator: {name}")
+        return prompt_sending()
+    # Try to build an actual RedTeamingAttack with AttackAdversarialConfig.
+    # Falls back to PromptSendingAttack only if construction itself fails —
+    # explicit, with a warning, so the operator knows adaptation isn't running.
+    target_context = (profile or {}).get("target_context") or {}
+    try:
+        from pyrit.executor.attack.multi_turn.red_teaming import RedTeamingAttack
+        from pyrit.executor.attack.core.attack_config import AttackAdversarialConfig
+        import tempfile
+        import yaml as _yaml
+
+        attacker_target = _default_red_team_chat(target_context=target_context)
+        system_prompt = _build_attacker_system_prompt(atomic, target_context)
+        # PyRIT 0.13's AttackAdversarialConfig takes a system_prompt_path
+        # (file path) in PyRIT's SeedPrompt YAML format, not a plain text
+        # file. Materialize the composed prompt into a YAML envelope so
+        # the attacker LLM picks up the target-context-aware framing.
+        seed_prompt_yaml = {
+            "name": f"atomic-atlas attacker prompt for {atomic.atlas_technique}",
+            "description": "Attacker LLM system prompt composed from the atomic's strategy and the target_context.",
+            "authors": ["atomic-atlas"],
+            # PyRIT's RedTeamingAttack validates that the seed prompt
+            # template declares 'objective' as a required parameter.
+            "parameters": ["objective"],
+            "data_type": "text",
+            "value": system_prompt,
+        }
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, encoding="utf-8"
+        )
+        _yaml.safe_dump(seed_prompt_yaml, tmp, sort_keys=False)
+        tmp.close()
+        adversarial_config = AttackAdversarialConfig(
+            target=attacker_target,
+            system_prompt_path=tmp.name,
+        )
+        return RedTeamingAttack(
+            objective_target=target,
+            attack_adversarial_config=adversarial_config,
+            attack_scoring_config=scoring_config,
+        )
+    except Exception as exc:
+        # Soft fallback — attacker LLM unavailable, proceed without it.
+        _log.warning(
+            "RedTeamingAttack unavailable (%s); falling back to "
+            "PromptSendingAttack for atomic %s",
+            exc,
+            atomic.atlas_technique,
+        )
+        return prompt_sending()
 
 
 # Legacy alias for callers that imported the old name. Removed in v0.2.

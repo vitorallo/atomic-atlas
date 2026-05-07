@@ -6,6 +6,8 @@ guid: 00000000-0000-4000-8000-000000000000  # Generate a fresh UUID4: python3 -c
 runs: 5
 target_requires:
   - capability: direct_chat         # List capabilities the target must expose
+multi_turn: true                    # true: attacker LLM mutates across turns (default).
+                                    # false: single-turn deterministic send.
 ---
 
 # [Technique Name] via [Vector Name]
@@ -18,7 +20,7 @@ One or two sentences. Write for a CISO who has 30 seconds. What is the real-worl
 - What the target must expose (tool, RAG, MCP server, etc.)
 
 ## Attack strategy
-Describe the attack concept. Reference the PyRIT orchestrator (PromptSendingOrchestrator or RedTeamingOrchestrator). Reference the payload seed file if one exists.
+Describe the attack concept. Multi-turn atomics (default) let the attacker LLM mutate variants across runs; single-turn atomics (`multi_turn: false`) send the payload verbatim. Reference the payload seed file if one exists.
 
 Payload seed: `payloads/your_payload_file.md` (or `.json`)
 

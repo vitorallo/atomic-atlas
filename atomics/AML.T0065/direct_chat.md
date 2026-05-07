@@ -6,8 +6,6 @@ guid: 0b1c2d3e-4f5a-4b6c-b37d-8e9f0a1b2c3d
 runs: 5
 target_requires:
   - capability: direct_chat
-pyrit_orchestrator: RedTeamingOrchestrator
-pyrit_scorer: SubStringScorer
 ---
 
 # LLM Prompt Crafting via Direct Chat

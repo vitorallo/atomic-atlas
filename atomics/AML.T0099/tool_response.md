@@ -8,8 +8,7 @@ target_requires:
   - capability: tool_use
   - capability: configurable_tool_endpoint
   - capability: downstream_decision_making
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Tool Data Poisoning via Manipulated Tool Response

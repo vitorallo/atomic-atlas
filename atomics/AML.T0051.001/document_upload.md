@@ -6,8 +6,6 @@ guid: 2d4f8a0c-3e5b-4c6d-9e1f-2a3b4c5d6e7f
 runs: 5
 target_requires:
   - capability: document_ingestion
-pyrit_orchestrator: RedTeamingOrchestrator
-pyrit_scorer: SubStringScorer
 ---
 
 # Indirect Prompt Injection via Document Upload

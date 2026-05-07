@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: a2a_outbound
   - capability: multi_agent_topology
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Exfiltration via Agent-to-Agent Message

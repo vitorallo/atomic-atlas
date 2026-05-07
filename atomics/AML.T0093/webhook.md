@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: webhook_ingestion
   - capability: tool_use
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Prompt Injection via Webhook-Triggered Agent

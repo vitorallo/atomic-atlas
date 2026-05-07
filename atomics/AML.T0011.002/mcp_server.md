@@ -6,8 +6,7 @@ guid: b74c6e62-cea9-4fa7-844c-16a45b28106e
 runs: 5
 target_requires:
   - capability: mcp_tool_use
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Poisoned AI Agent Tool — Initial Access via MCP

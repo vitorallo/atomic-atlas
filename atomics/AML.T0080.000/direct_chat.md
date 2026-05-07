@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: direct_chat
   - capability: persistent_memory
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Memory Poisoning via Direct Chat

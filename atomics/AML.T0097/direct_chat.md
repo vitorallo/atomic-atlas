@@ -7,8 +7,6 @@ runs: 5
 target_requires:
   - capability: direct_chat
   - capability: persistent_memory
-pyrit_orchestrator: RedTeamingOrchestrator
-pyrit_scorer: SubStringScorer
 ---
 
 # Memory Exfiltration via Direct Chat

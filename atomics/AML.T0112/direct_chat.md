@@ -6,8 +6,7 @@ guid: 1fee8ed9-4184-4c0d-b616-f681a7cf79e4
 runs: 5
 target_requires:
   - capability: direct_chat
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Resource Exhaustion via Direct Chat

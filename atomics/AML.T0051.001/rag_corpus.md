@@ -7,8 +7,6 @@ runs: 5
 target_requires:
   - capability: rag_retrieval
   - capability: outbound_http_tool
-pyrit_orchestrator: RedTeamingOrchestrator
-pyrit_scorer: SubStringScorer
 ---
 
 # Indirect Prompt Injection via RAG Corpus

@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: direct_chat
   - capability: multi_turn_context
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # AI Agent Context Poisoning via Direct Chat

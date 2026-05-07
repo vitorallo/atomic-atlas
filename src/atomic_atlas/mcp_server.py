@@ -87,8 +87,7 @@ def read_atomic(path: str) -> dict[str, Any]:
         "guid": atomic.guid,
         "runs": atomic.runs,
         "target_requires": atomic.target_requires,
-        "pyrit_orchestrator": atomic.pyrit_orchestrator,
-        "pyrit_scorer": atomic.pyrit_scorer,
+        "multi_turn": atomic.multi_turn,
         "sections": atomic.sections,
         "path": str(atomic.path.relative_to(ATOMICS_DIR)),
     }

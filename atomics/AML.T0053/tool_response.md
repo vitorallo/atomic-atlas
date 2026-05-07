@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: tool_use
   - capability: configurable_tool_endpoint
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Unauthorized Tool Invocation via Poisoned Tool Response

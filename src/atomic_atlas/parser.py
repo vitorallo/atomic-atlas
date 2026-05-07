@@ -32,8 +32,7 @@ class AtomicTest:
     guid: str
     runs: int
     target_requires: list[dict[str, str]]
-    pyrit_orchestrator: str
-    pyrit_scorer: str
+    multi_turn: bool
     sections: dict[str, str]
     payload: str | None = None  # optional explicit payload reference
     success_indicators: list[str] | None = None  # optional explicit scorer hits
@@ -81,8 +80,7 @@ def load(path: Path | str, validate: bool = True) -> AtomicTest:
         guid=frontmatter["guid"],
         runs=frontmatter.get("runs", 5),
         target_requires=frontmatter.get("target_requires", []),
-        pyrit_orchestrator=frontmatter.get("pyrit_orchestrator", "PromptSendingOrchestrator"),
-        pyrit_scorer=frontmatter.get("pyrit_scorer", "SubStringScorer"),
+        multi_turn=frontmatter.get("multi_turn", True),
         sections=sections,
         payload=frontmatter.get("payload"),
         success_indicators=frontmatter.get("success_indicators"),

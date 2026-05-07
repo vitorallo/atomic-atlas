@@ -6,8 +6,7 @@ guid: 11111111-1111-4111-8111-111111111111
 runs: 1
 target_requires:
   - capability: email_inbound
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Test fixture — adapterless vector

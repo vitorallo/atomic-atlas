@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: mcp_tool_use
   - capability: outbound_http
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # AI Agent as C2 via MCP Server

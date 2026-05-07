@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: mcp_tool_discovery
   - capability: third_party_mcp_allowed
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Poisoned Tool via Malicious MCP Server Publication

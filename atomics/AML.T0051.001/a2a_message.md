@@ -7,8 +7,7 @@ runs: 5
 target_requires:
   - capability: a2a_inbound
   - capability: multi_agent_topology
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Indirect Prompt Injection via Agent-to-Agent Message

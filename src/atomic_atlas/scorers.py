@@ -1,22 +1,24 @@
 """Scorers for atomic-atlas.
 
-Three tiers (see openspec/changes/scoring-tiers/specs.md):
+Two tiers (see openspec/changes/scoring-tiers/specs.md):
 
-- ``LLMJudgeScorer`` (Tier 1): wraps PyRIT's ``SelfAskTrueFalseScorer``;
-  reads the atomic's ``## Success criteria`` prose against the agent's
-  response. Default when an attacker / judge LLM is reachable.
-- ``IndicatorScorer`` (Tier 2): any-of-N case-insensitive substring match
-  over ``success_indicators``. Default when no judge available.
-- Legacy ``SubStringScorer`` (Tier 3): single-substring match against
-  ``## Success criteria`` prose. Brittle; deprecated; fallback only.
+- ``LLMJudgeScorer``: wraps PyRIT's ``SelfAskTrueFalseScorer``; reads the
+  atomic's ``## Success criteria`` prose against the agent's response.
+  Default when a judge LLM is reachable.
+- ``IndicatorScorer``: any-of-N case-insensitive substring match over
+  ``success_indicators``. Default when no judge is available; also the
+  fallback for atomics without explicit indicators (uses one substring
+  derived from Success criteria).
 
-All four scorer wrappers (judge, indicators, refusal, composite) emit a
-shared ``Evidence`` payload via PyRIT's ``score.score_metadata["evidence"]``
-channel. The runner reads it after ``attack.execute_async`` and stores
-it on each ``RunResult.run_details`` entry.
+Both are wrapped in a cheap refusal short-circuit by default — when a
+curated refusal phrase fires in the agent's response, the verdict is
+False without paying for the primary scorer's cost.
 
-PyRIT imports stay lazy (inside ``build``) so this module is importable
-in lightweight installs.
+Each scorer emits a structured ``Evidence`` payload via PyRIT's
+``score.score_metadata["evidence"]`` channel. The runner reads it after
+``attack.execute_async`` and stores it on each ``RunResult.run_details``
+entry. PyRIT imports stay lazy (inside ``build``) so this module is
+importable in lightweight installs.
 """
 
 from __future__ import annotations

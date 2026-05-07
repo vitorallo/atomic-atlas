@@ -62,21 +62,10 @@
       },
       "description": "Capabilities the target must expose for this atomic to be applicable"
     },
-    "pyrit_orchestrator": {
-      "type": "string",
-      "enum": [
-        "PromptSendingOrchestrator",
-        "RedTeamingOrchestrator",
-        "MultiTurnOrchestrator",
-        "CrescendoOrchestrator"
-      ],
-      "default": "PromptSendingOrchestrator",
-      "description": "PyRIT orchestrator to use for this atomic"
-    },
-    "pyrit_scorer": {
-      "type": "string",
-      "description": "PyRIT scorer class name to use for success evaluation",
-      "default": "SubStringScorer"
+    "multi_turn": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true (default), exec uses PyRIT's RedTeamingAttack — an attacker LLM mutates the seed across turns. When false, exec uses PromptSendingAttack — single-turn, deterministic. Without an OPENAI_API_KEY (or with ATOMIC_ATLAS_OFFLINE=1) the runner falls back to PromptSendingAttack regardless."
     },
     "payload": {
       "type": "string",
@@ -119,21 +108,9 @@
       "properties": {
         "strategy": {
           "type": "string",
-          "enum": ["auto", "judge", "indicators", "substring", "composite"],
+          "enum": ["auto", "judge", "indicators"],
           "default": "auto",
-          "description": "Override scorer-tier selection. 'auto' lets the runner pick (judge if API key present, else indicators, else substring). 'composite' requires the 'scorers' field."
-        },
-        "scorers": {
-          "type": "array",
-          "items": {"type": "string", "enum": ["judge", "indicators", "substring"]},
-          "minItems": 2,
-          "description": "Child scorers for composite strategy."
-        },
-        "aggregator": {
-          "type": "string",
-          "enum": ["OR", "AND", "MAJORITY"],
-          "default": "OR",
-          "description": "How to combine child scorer verdicts in composite strategy."
+          "description": "Override scorer-tier selection. 'auto' picks judge when an LLM is available + Success criteria is set, else indicators."
         },
         "refusal": {
           "type": "boolean",
@@ -143,7 +120,7 @@
         "judge_model": {
           "type": "string",
           "minLength": 1,
-          "description": "Per-atomic judge model override (e.g., 'gpt-4o-mini'). Falls back to ATOMIC_ATLAS_ATTACKER_MODEL env or PyRIT default."
+          "description": "Per-atomic judge model override (e.g., 'gpt-4o-mini'). Falls back to ATOMIC_ATLAS_LLM_MODEL env or 'gpt-4o'."
         }
       }
     },

@@ -6,8 +6,7 @@ guid: 81cd4303-abdf-48b5-8291-41a298a6eb84
 runs: 5
 target_requires:
   - capability: mcp_tool_use
-pyrit_orchestrator: PromptSendingOrchestrator
-pyrit_scorer: SubStringScorer
+multi_turn: false
 ---
 
 # Tool Poisoning via MCP Server
