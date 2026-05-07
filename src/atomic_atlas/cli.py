@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import click
@@ -173,13 +174,7 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
         f"({result.success_rate:.0%}) in {result.duration_seconds:.1f}s"
     )
 
-    results_path = Path(output)
-    existing: list = []
-    if results_path.exists():
-        existing = json.loads(results_path.read_text())
-    existing.append(result.__dict__ | {"run_details": result.run_details})
-    results_path.write_text(json.dumps(existing, indent=2))
-    click.echo(f"Results written to {results_path}")
+    _append_result(result, Path(output))
 
 
 @cli.command()
@@ -189,7 +184,7 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
 def report(input_file: str, fmt: str, output: str | None):
     """Generate a report from exec results."""
     from .runner import RunResult
-    from .reporters import to_navigator_layer, print_coverage_matrix
+    from .reporters import to_navigator_layer, print_coverage_matrix, write_markdown
 
     raw = json.loads(Path(input_file).read_text())
     results = [RunResult(**{k: v for k, v in r.items() if k != "run_details"}) for r in raw]
@@ -209,7 +204,7 @@ def report(input_file: str, fmt: str, output: str | None):
         print_coverage_matrix(ATOMICS_DIR, results)
 
     elif fmt == "markdown":
-        _markdown_report(results, output)
+        write_markdown(results, output)
 
 
 @cli.command()
@@ -314,8 +309,6 @@ def adapt_cmd(
     See openspec/changes/payload-adapter/proposal.md for the design.
     """
     import asyncio
-    from .parser import load
-    from .runner import load_profile
     from .payload_adapter import (
         Adaptation,
         AdaptationParseError,
@@ -323,66 +316,21 @@ def adapt_cmd(
         build_prompt,
     )
 
-    try:
-        atomic = load(_resolve_atomic_path(atomic_path))
-    except Exception as exc:
-        click.echo(f"ERROR: cannot load atomic {atomic_path!r}: {exc}", err=True)
-        sys.exit(2)
-
-    try:
-        profile_data = load_profile(Path(profile))
-    except Exception as exc:
-        click.echo(f"ERROR: cannot load profile {profile!r}: {exc}", err=True)
-        sys.exit(2)
-
-    recon_data: dict | None = None
-    if recon_file:
-        try:
-            recon_data = json.loads(Path(recon_file).read_text(encoding="utf-8"))
-        except Exception as exc:
-            click.echo(f"ERROR: cannot read --recon {recon_file!r}: {exc}", err=True)
-            sys.exit(2)
-
-    observed: list[dict] | None = None
-    if observed_file:
-        try:
-            raw = json.loads(Path(observed_file).read_text(encoding="utf-8"))
-        except Exception as exc:
-            click.echo(f"ERROR: cannot read --observed {observed_file!r}: {exc}", err=True)
-            sys.exit(2)
-        # results.json is a list of RunResult dicts; flatten to per-run details.
-        observed = []
-        for r in raw if isinstance(raw, list) else []:
-            for d in r.get("run_details", []):
-                if "evidence" in d:
-                    observed.append({
-                        "evidence": d["evidence"],
-                        "atlas_technique": r.get("atlas_technique"),
-                        "target_id": (
-                            (profile_data.get("target_context") or {}).get("target_id")
-                            or Path(profile).stem
-                        ),
-                    })
-
-    # Resolve target_id default.
-    resolved_target_id = (
-        target_id
-        or (profile_data.get("target_context") or {}).get("target_id")
-        or Path(profile).stem
+    inputs = _collect_adapt_inputs(
+        atomic_path=atomic_path,
+        profile=profile,
+        recon_file=recon_file,
+        observed_file=observed_file,
+        target_id=target_id,
+        include_seed=include_seed,
     )
-
-    # Optional seed payload as shape reference.
-    seed_text: str | None = None
-    if include_seed and atomic.payloads_dir.exists():
-        for candidate in sorted(atomic.payloads_dir.glob("*.md")):
-            seed_text = candidate.read_text(encoding="utf-8")
-            break
 
     if no_llm:
         system_prompt, user_prompt = build_prompt(
-            atomic, profile_data,
-            recon=recon_data, observed=observed, seed_text=seed_text,
-            target_id=resolved_target_id,
+            inputs.atomic, inputs.profile_data,
+            recon=inputs.recon, observed=inputs.observed,
+            seed_text=inputs.seed_text,
+            target_id=inputs.target_id,
         )
         click.echo("=== SYSTEM PROMPT ===")
         click.echo(system_prompt)
@@ -392,11 +340,11 @@ def adapt_cmd(
 
     try:
         adaptation: Adaptation = asyncio.run(_adapt_async(
-            atomic, profile_data,
-            recon=recon_data,
-            observed=observed,
-            seed_text=seed_text,
-            target_id=resolved_target_id,
+            inputs.atomic, inputs.profile_data,
+            recon=inputs.recon,
+            observed=inputs.observed,
+            seed_text=inputs.seed_text,
+            target_id=inputs.target_id,
             include_same_technique=include_same_technique,
         ))
     except AdaptationParseError as exc:
@@ -415,6 +363,98 @@ def adapt_cmd(
         click.echo(f"Adapted payload written to {output_file}")
     else:
         click.echo(bundle)
+
+
+@dataclass
+class _AdaptInputs:
+    atomic: object
+    profile_data: dict
+    recon: dict | None
+    observed: list[dict] | None
+    seed_text: str | None
+    target_id: str
+
+
+def _collect_adapt_inputs(
+    *,
+    atomic_path: str,
+    profile: str,
+    recon_file: str | None,
+    observed_file: str | None,
+    target_id: str | None,
+    include_seed: bool,
+) -> _AdaptInputs:
+    """Resolve every input the adapter needs, exiting cleanly on any error.
+
+    Splits adapt_cmd's "load + parse" phase into one place so the command
+    body reads as: collect → call → write. Side effects are limited to
+    sys.exit(2) on input errors.
+    """
+    from .parser import load
+    from .runner import load_profile
+
+    try:
+        atomic = load(_resolve_atomic_path(atomic_path))
+    except Exception as exc:
+        click.echo(f"ERROR: cannot load atomic {atomic_path!r}: {exc}", err=True)
+        sys.exit(2)
+
+    try:
+        profile_data = load_profile(Path(profile))
+    except Exception as exc:
+        click.echo(f"ERROR: cannot load profile {profile!r}: {exc}", err=True)
+        sys.exit(2)
+
+    resolved_target_id = (
+        target_id
+        or (profile_data.get("target_context") or {}).get("target_id")
+        or Path(profile).stem
+    )
+
+    recon = _load_json_or_exit(recon_file, label="--recon") if recon_file else None
+    observed = (
+        _flatten_observed(_load_json_or_exit(observed_file, label="--observed"),
+                          target_id=resolved_target_id)
+        if observed_file else None
+    )
+
+    seed_text: str | None = None
+    if include_seed and atomic.payloads_dir.exists():
+        for candidate in sorted(atomic.payloads_dir.glob("*.md")):
+            seed_text = candidate.read_text(encoding="utf-8")
+            break
+
+    return _AdaptInputs(
+        atomic=atomic,
+        profile_data=profile_data,
+        recon=recon,
+        observed=observed,
+        seed_text=seed_text,
+        target_id=resolved_target_id,
+    )
+
+
+def _load_json_or_exit(path: str, *, label: str) -> dict | list:
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as exc:
+        click.echo(f"ERROR: cannot read {label} {path!r}: {exc}", err=True)
+        sys.exit(2)
+
+
+def _flatten_observed(raw, *, target_id: str) -> list[dict]:
+    """``results.json`` is a list of RunResult dicts; flatten to per-run
+    detail entries the adapter's _select_observed expects."""
+    out: list[dict] = []
+    for r in raw if isinstance(raw, list) else []:
+        for d in r.get("run_details", []):
+            if "evidence" in d:
+                out.append({
+                    "evidence": d["evidence"],
+                    "atlas_technique": r.get("atlas_technique"),
+                    "target_id": target_id,
+                })
+    return out
 
 
 def _load_payload_from_file(path: Path) -> tuple[str, str]:
@@ -448,6 +488,20 @@ def _load_payload_from_file(path: Path) -> tuple[str, str]:
     return text.strip(), "raw"
 
 
+def _append_result(result, output_path: Path) -> None:
+    """Append a RunResult to a JSON results file (created if absent).
+
+    ``exec`` accumulates results across invocations so an operator can
+    chain multiple ``exec`` calls and produce one report at the end.
+    """
+    existing: list = []
+    if output_path.exists():
+        existing = json.loads(output_path.read_text())
+    existing.append(result.__dict__ | {"run_details": result.run_details})
+    output_path.write_text(json.dumps(existing, indent=2))
+    click.echo(f"Results written to {output_path}")
+
+
 def _resolve_atomic_path(atomic_path: str) -> Path:
     p = Path(atomic_path)
     if p.exists():
@@ -469,62 +523,6 @@ def _resolve_atomic_path(atomic_path: str) -> Path:
         if candidate.exists():
             return candidate
     raise click.BadParameter(f"Atomic not found: {atomic_path}")
-
-
-def _render_evidence_block(ev: dict) -> list[str]:
-    """Render an Evidence dict as indented markdown bullets under a run line."""
-    out: list[str] = []
-    tier = ev.get("tier", "?")
-    out.append(f"  - tier: `{tier}`")
-    if ev.get("refusal_short_circuited"):
-        out.append("  - refusal short-circuit fired (primary scorer skipped)")
-    matched = ev.get("matched_indicators") or []
-    if matched:
-        joined = ", ".join(f"`{m}`" for m in matched)
-        out.append(f"  - matched indicators: {joined}")
-    reasoning = ev.get("judge_reasoning")
-    if reasoning:
-        compact = reasoning.replace("\n", " ").strip()
-        out.append(f"  - judge: {compact[:240]}")
-    extracted = ev.get("extracted") or {}
-    for name, hits in extracted.items():
-        sample = ", ".join(f"`{h}`" for h in hits[:3])
-        more = f" (+{len(hits) - 3} more)" if len(hits) > 3 else ""
-        out.append(f"  - extracted **{name}**: {sample}{more}")
-    return out
-
-
-def _markdown_report(results, output: str | None) -> None:
-    lines = ["# atomic-atlas results\n"]
-    for r in results:
-        lines.append(f"## {r.atlas_technique} / {r.interaction_vector}")
-        lines.append(f"- Success rate: {r.success_rate:.0%} ({r.successes}/{r.total_runs})")
-        if r.errors:
-            lines.append(f"- Errors: {r.errors}")
-        lines.append(f"- Duration: {r.duration_seconds:.1f}s")
-        details = getattr(r, "run_details", None) or []
-        if details:
-            lines.append("")
-            lines.append("### Run details")
-            for d in details:
-                run_num = d.get("run", "?")
-                if "error" in d:
-                    phase = d.get("phase", "run")
-                    lines.append(f"- Run {run_num} **error** ({phase}): `{d['error']}`")
-                else:
-                    mark = "✓" if d.get("success") else "✗"
-                    preview = d.get("response_preview", "").replace("\n", " ").strip()
-                    lines.append(f"- Run {run_num} {mark} — {preview[:160]}")
-                    ev = d.get("evidence")
-                    if ev:
-                        lines.extend(_render_evidence_block(ev))
-        lines.append("")
-    text = "\n".join(lines)
-    if output:
-        Path(output).write_text(text)
-        click.echo(f"Report written to {output}")
-    else:
-        click.echo(text)
 
 
 # ---------------------------------------------------------------------------
