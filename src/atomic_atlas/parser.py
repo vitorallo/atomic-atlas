@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -35,6 +36,8 @@ class AtomicTest:
     pyrit_scorer: str
     sections: dict[str, str]
     payload: str | None = None  # optional explicit payload reference
+    success_indicators: list[str] | None = None  # optional explicit scorer hits
+    seed_prompt: str | None = None  # optional concrete attack-string used as objective
 
     @property
     def technique_dir(self) -> Path:
@@ -78,6 +81,8 @@ def load(path: Path | str, validate: bool = True) -> AtomicTest:
         pyrit_scorer=frontmatter.get("pyrit_scorer", "SubStringScorer"),
         sections=sections,
         payload=frontmatter.get("payload"),
+        success_indicators=frontmatter.get("success_indicators"),
+        seed_prompt=frontmatter.get("seed_prompt"),
     )
 
 
@@ -102,11 +107,18 @@ def load_all(atomics_dir: Path | str) -> list[AtomicTest]:
     return tests
 
 
-def _validate_frontmatter(frontmatter: dict[str, Any], path: Path) -> None:
+@functools.lru_cache(maxsize=1)
+def _load_schema() -> dict[str, Any] | None:
     if not _SCHEMA_PATH.exists():
-        return
+        return None
     import json
-    schema = json.loads(_SCHEMA_PATH.read_text())
+    return json.loads(_SCHEMA_PATH.read_text())
+
+
+def _validate_frontmatter(frontmatter: dict[str, Any], path: Path) -> None:
+    schema = _load_schema()
+    if schema is None:
+        return
     try:
         jsonschema.validate(frontmatter, schema)
     except jsonschema.ValidationError as exc:

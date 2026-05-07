@@ -26,7 +26,9 @@
 - [ ] Keynote demo dry-run: recon → runbook exec → report against DVAA (architecture verified live; full keynote rehearsal still TODO)
 
 ## Pending (v0.2)
-- [ ] exec: chain support (T0051.001 → T0053 → T0086)
+- [ ] exec: chain support (T0051.001 → T0053 → T0086) — superseded by runbooks; close once runbook executor is the documented chain mechanism
 - [ ] exec: cost estimation before run (count API calls, estimate tokens)
 - [ ] report: HTML format with embedded Navigator iframe
 - [ ] report: auto-generate index.yaml coverage catalog
+- [ ] **`atomic-atlas init-profile --target URL --output X.yaml`** — deterministic CLI scaffold that recons the target and emits a starter profile with adapters for detected vectors plus commented-out scaffolding for the others. ~30% filled (`base_url`, `expected_tools` from recon, partial `known_guardrails`); operator fills `domain`, `agent_role`, `language`, credentials, model names. Useful in CI / no-LLM environments / for repo-shipped templates. Composes with the agent-runner skill (skill calls `init-profile` internally for the scaffold, then enriches via probing + operator interaction)
+- [ ] CLI: surface a `--target-context` quick override (e.g., `--ctx domain=travel --ctx agent_role=...`) so operators can layer light context onto a profile without editing the YAML

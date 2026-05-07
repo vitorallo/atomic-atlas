@@ -82,6 +82,17 @@
       "type": "string",
       "pattern": "^payloads/[\\w.\\-]+$",
       "description": "Optional explicit payload file reference (relative to the atomic's directory). When omitted, the runner falls back to parsing the body for `payloads/...` references and to a single .json/.md file in payloads/."
+    },
+    "success_indicators": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "minItems": 1,
+      "description": "Optional list of substrings the runner's scorer matches (case-insensitive, any-of) against the agent's response to declare success. Replaces the heuristic of using the first line of '## Success criteria' prose as the literal substring (which never matches realistic responses). When omitted, the runner falls back to the legacy heuristic for backwards compatibility."
+    },
+    "seed_prompt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional concrete attack-string sent verbatim as the objective when no attacker LLM is available. With an attacker LLM the seed serves as an initial mutation seed; without one (e.g., ATOMIC_ATLAS_NO_ATTACKER_LLM=1 or no API key) it IS the attack string. Falls back to the atomic's '## Interaction' body section if not set."
     }
   }
 }

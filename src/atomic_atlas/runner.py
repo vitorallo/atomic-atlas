@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import logging
 import os
 import time
 from dataclasses import dataclass, field
@@ -13,6 +14,12 @@ from typing import Any
 import yaml
 
 from .parser import AtomicTest, load
+
+_log = logging.getLogger(__name__)
+
+# Strings treated as "no real OpenAI API key". The empty string is handled
+# separately by the truthiness short-circuit in callers.
+_PLACEHOLDER_API_KEYS = frozenset({"unused", "none", "null"})
 from .targets.base import (
     AtomicAtlasTarget,
     PYRIT_AVAILABLE,
@@ -196,11 +203,14 @@ async def run_atomic(
             return result
 
         attack = _build_attack(atomic, target, profile=profile)
-        from pyrit.executor.attack.core.attack_parameters import AttackParameters
         from pyrit.executor.attack.core.attack_strategy import AttackOutcome
         from .hitl import HITLAbortError
 
-        objective = atomic.section("Interaction") or "Begin the test."
+        # Priority: explicit seed_prompt frontmatter > Interaction body section
+        # > literal "Begin the test." fallback. The seed_prompt path is what
+        # makes deterministic runs (no attacker LLM) actually attack the
+        # target rather than send the atomic's prose description.
+        objective = atomic.seed_prompt or atomic.section("Interaction") or "Begin the test."
         aborted = False
 
         for run_num in range(atomic.runs):
@@ -212,9 +222,9 @@ async def run_atomic(
                 result.run_details.append(detail)
                 continue
             try:
-                attack_result = await attack.execute_async(
-                    parameters=AttackParameters(objective=objective)
-                )
+                # PyRIT 0.13: execute_async takes objective + other params as
+                # direct kwargs, not wrapped in an AttackParameters object.
+                attack_result = await attack.execute_async(objective=objective)
                 success = attack_result.outcome == AttackOutcome.SUCCESS
                 detail["success"] = success
                 last_resp = attack_result.last_response
@@ -263,11 +273,24 @@ def _build_attack(
     from pyrit.executor.attack.single_turn.prompt_sending import PromptSendingAttack
     from pyrit.executor.attack.core.attack_config import AttackScoringConfig
     from pyrit.score import SubStringScorer
+    from .scorers import IndicatorScorer
 
-    scorer = SubStringScorer(
-        substring=_success_substring(atomic),
-        categories=[atomic.atlas_technique],
-    )
+    indicators = atomic.success_indicators
+    if indicators:
+        # Preferred path: explicit any-of-N indicator matching.
+        scorer = IndicatorScorer.build(
+            indicators=indicators,
+            categories=[atomic.atlas_technique],
+        )
+    else:
+        # Legacy fallback: extract a single line from the success-criteria
+        # prose and feed it to PyRIT's SubStringScorer. Brittle but kept for
+        # backwards compatibility while atomics get backfilled with
+        # explicit success_indicators.
+        scorer = SubStringScorer(
+            substring=_success_substring(atomic),
+            categories=[atomic.atlas_technique],
+        )
     scoring_config = AttackScoringConfig(objective_scorer=scorer)
 
     name = atomic.pyrit_orchestrator
@@ -277,6 +300,30 @@ def _build_attack(
             attack_scoring_config=scoring_config,
         )
     if name in ("RedTeamingOrchestrator", "RedTeamingAttack"):
+        # When ATOMIC_ATLAS_NO_ATTACKER_LLM=1, force PromptSendingAttack
+        # regardless of the atomic's tag. Useful for offline / no-API-key
+        # environments and for test runs where you don't want the attacker
+        # LLM (which talks to api.openai.com or your configured proxy)
+        # to interfere with verifying the target side.
+        prompt_sending = lambda: PromptSendingAttack(
+            objective_target=target,
+            attack_scoring_config=scoring_config,
+        )
+        if os.environ.get("ATOMIC_ATLAS_NO_ATTACKER_LLM") == "1":
+            return prompt_sending()
+        attacker_api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not attacker_api_key or attacker_api_key.lower() in _PLACEHOLDER_API_KEYS:
+            # Without this guard we'd silently construct an attacker LLM
+            # with api_key="unused"; failure would surface only at
+            # execute_async time as a misleading 401 from api.openai.com.
+            _log.warning(
+                "OPENAI_API_KEY missing or placeholder; falling back to "
+                "PromptSendingAttack for atomic %s. Set a real key, point "
+                "OPENAI_API_BASE at a LiteLLM-style proxy, or set "
+                "ATOMIC_ATLAS_NO_ATTACKER_LLM=1 to silence this warning.",
+                atomic.atlas_technique,
+            )
+            return prompt_sending()
         # Try to build an actual RedTeamingAttack with AttackAdversarialConfig.
         # Falls back to PromptSendingAttack only if the attacker LLM cannot be
         # constructed (e.g., missing API key in the env) — explicit, with a
@@ -322,8 +369,7 @@ def _build_attack(
             # Soft fallback — attacker LLM unavailable, proceed without it.
             # The atomic still runs (one-shot via the seed objective), but
             # multi-turn mutation is not happening this run.
-            import logging
-            logging.getLogger(__name__).warning(
+            _log.warning(
                 "RedTeamingAttack unavailable (%s); falling back to "
                 "PromptSendingAttack for atomic %s",
                 exc,

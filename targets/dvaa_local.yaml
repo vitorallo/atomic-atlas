@@ -41,7 +41,11 @@
 
 # Default target: HelperBot — typical chatbot with common security gaps,
 # matches AML.T0051.000 / direct_chat well.
-base_url: http://localhost:7002
+#
+# NOTE: base_url MUST include /v1 — DVAA exposes its chat endpoints at
+# /v1/chat/completions; PyRIT's OpenAI SDK appends /chat/completions to the
+# base, so we need /v1 already in the path.
+base_url: http://localhost:7002/v1
 
 # Optional target_context — when present, is forwarded to the attacker LLM's
 # system prompt for RedTeamingAttack-tagged atomics so its mutations are

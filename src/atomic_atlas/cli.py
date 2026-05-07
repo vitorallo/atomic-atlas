@@ -123,7 +123,11 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
     profile_data: dict = {"base_url": target, "adapters": {}}
     if profile:
         profile_data = load_profile(profile)
-        profile_data.setdefault("base_url", target)
+        # --target overrides the profile's base_url. The profile's value is a
+        # documented default for repo-shipped profiles; the operator's CLI
+        # arg is more recent and more specific. Previously we silently kept
+        # the profile's value via setdefault — that surprised users.
+        profile_data["base_url"] = target
 
     if atomic.interaction_vector in ADAPTER_VECTORS:
         adapter_cfg = profile_data.get("adapters", {}).get(atomic.interaction_vector)
@@ -381,7 +385,7 @@ def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
     profile_data: dict = {"base_url": target, "adapters": {}}
     if profile:
         profile_data = load_profile(profile)
-        profile_data.setdefault("base_url", target)
+        profile_data["base_url"] = target  # --target overrides profile default
 
     click.echo(f"Running runbook {rb.runbook_id} ({len(rb.atomics)} step)…")
     result = asyncio.run(run_runbook(rb, ATOMICS_DIR, profile_data, authorized=True, hitl=hitl))
