@@ -117,15 +117,19 @@ ollama pull qwen2.5:7b
 
 Then run as usual. No CLI flag changes needed — the `.env` is the single source of truth.
 
-**Cost lever cheat-sheet** (high-cost → low-cost):
+**Cost lever cheat-sheet** (high-cost → low-cost; pick one in `.env`):
 
 | Setup | Per-atomic cost (5 runs) | Notes |
 |---|---|---|
-| `gpt-4o` (default) | ~$0.30-0.80 | Honest verdicts, fast |
-| `gpt-4o-mini` (set in `.env`) | ~$0.02-0.05 | Slight judge-quality hit; usually fine |
-| OpenRouter `:free` model | $0 | Rate-limited; some 429s |
+| `gpt-4o` (OpenAI) | ~$0.30-0.80 | Strongest honest verdicts; default if you don't pin anything else |
+| `gpt-4o-mini` (OpenAI) | ~$0.02-0.05 | Slight judge-quality hit; usually fine |
+| **`deepseek/deepseek-v4-flash` (OpenRouter)** | **~$0.01-0.03** | **Recommended cheap default.** Output-cheap, strong on strict-JSON judge prompts and multi-turn `RedTeamingAttack`. Verified end-to-end against DVAA. |
+| `google/gemma-3-12b-it` (OpenRouter) | ~$0.005-0.02 | Even cheaper; older model, judge quality acceptable for smoke testing |
+| OpenRouter `:free` model | $0 | Rate-limited (429s) and provider-side slowness; multi-turn paths can stall — use for single-turn smoke only |
 | Ollama local | $0 | Bound by your hardware |
 | `ATOMIC_ATLAS_OFFLINE=1` (in `.env`) | $0 | No LLM at all; falls back to deterministic indicator scoring |
+
+> **Caveat: Gemma 4 26b paid (`google/gemma-4-26b-a4b-it`) handles single-turn judge calls fine but stalls in PyRIT's multi-turn `RedTeamingAttack` — long adversarial prompts hit per-turn latency that compounds across runs. Skip it for multi-turn atomics; DeepSeek v4 flash is the cheap-and-reliable default for our workload.
 
 ## Common errors
 
