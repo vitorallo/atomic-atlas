@@ -42,6 +42,21 @@
 ### Commit
 - [x] Single commit `payload-adapter v0.1: LLM-driven init payload generation`
 
+### Handoff to exec (follow-up commit `8081659`)
+- [x] `--payload-file PATH` flag on `exec` (parses an `Adaptation` bundle, falls back to raw text, overrides `atomic.seed_prompt` in-memory before run_atomic)
+- [x] `_load_payload_from_file` helper with bundle/raw/empty handling
+- [x] 5 new tests: `_load_payload_from_file_bundle/raw/malformed/empty` + `test_exec_payload_file_overrides_seed_prompt`
+- [x] Live verify: `adapt → exec --payload-file` end-to-end against DVAA-LegacyBot (2/2 success in 15.8s)
+
+### Docs (commit `a696ff4`)
+- [x] `docs/adapt.md` (new) — authoring guide: bundle format, observed-evidence selection rules, --no-llm dry-run, --payload-file handoff, audit trail
+- [x] `docs/cli-reference.md` (new) — per-subcommand reference for every CLI flag with copy-pasteable examples
+- [x] `docs/use-cases.md` (new) — three end-to-end walkthroughs (single-technique smoke, chained kill chain with `adapt`, engagement runbook)
+- [x] `docs/quickstart.md` — new Step 7a covering `adapt` → `exec --payload-file` (bare and chained `--observed`)
+- [x] `SPEC.md` — paragraph on `adapt` + `--payload-file` as the in-between option between hand-authored seeds and the agent runner
+- [x] `PRD.md` — v0.2 milestone marked shipped with live verification numbers
+- [x] `README.md` — docs index updated to link the four new doc pages
+
 ## v0.2 (deferred to a follow-on change, not in scope here)
 
 - [ ] `--regenerate K` produces K variants for A/B testing

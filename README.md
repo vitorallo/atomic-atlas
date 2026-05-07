@@ -52,7 +52,11 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 | Doc | What it covers |
 |---|---|
-| [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review |
+| [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review; `adapt` → `exec --payload-file` chain |
+| [docs/use-cases.md](docs/use-cases.md) | Three end-to-end walkthroughs: smoke a single technique, chained kill chain with `adapt`, full engagement runbook |
+| [docs/cli-reference.md](docs/cli-reference.md) | Per-subcommand reference: every flag with copy-pasteable examples |
+| [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators / substring), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
+| [docs/adapt.md](docs/adapt.md) | Payload adapter: bundle format, prompt structure, observed-evidence selection rules, audit trail |
 | [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
 | [docs/targets.md](docs/targets.md) | Target profile format, `target_context` for domain-aware payload adaptation, DVAA setup, auth schemes |
 | [docs/agent-runner.md](docs/agent-runner.md) | Claude Code skill + MCP server, when to use them vs the CLI |
