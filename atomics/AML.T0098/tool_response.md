@@ -30,6 +30,7 @@ extractors:
     pattern: "Bearer\\s+([A-Za-z0-9._\\-]+)"
   - name: generic_api_key
     pattern: "(?i)(?:api[_-]?key|access[_-]?token)[\"'\\s:=]+([A-Za-z0-9._\\-]{12,})"
+severity_floor: high
 ---
 
 # Tool Credential Harvesting via Poisoned Tool Response

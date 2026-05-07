@@ -136,6 +136,11 @@
         }
       },
       "description": "Optional regex-based extractors for capturing artifacts (credentials, file fragments, system-prompt leaks) from the response. Pure regex — no LLM. Matches accumulate into evidence.extracted."
+    },
+    "severity_floor": {
+      "type": "string",
+      "enum": ["informational", "low", "medium", "high", "critical"],
+      "description": "Optional minimum severity for findings produced by this atomic. Raises the derived severity when set; never lowers. Use for atomics whose successful exploitation is inherently severe regardless of how often it lands (e.g., credential disclosure, exfiltration). When omitted, severity is derived purely from success rate + evidence richness."
     }
   }
 }

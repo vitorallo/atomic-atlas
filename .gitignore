@@ -49,6 +49,8 @@ runbook-results.json
 *-runbook-results.json
 layer.json
 *.layer.json
+atomic-atlas-engagement/
+*.engagement/
 
 # PyRIT memory (default DB path written by SQLiteMemory when not :memory:)
 pyrit.db

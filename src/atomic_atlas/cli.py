@@ -82,7 +82,13 @@ def list_atomics(vector: str | None, technique: str | None, as_json: bool):
 @click.option("--target", required=True, help="Target agent base URL")
 @click.option("--profile", default=None, type=click.Path(exists=True), help="Target profile YAML")
 @click.option("--runs", default=None, type=int, help="Override number of runs")
-@click.option("--output", default="results.json", show_default=True, help="Output file for results JSON")
+@click.option("--output", default=None,
+              help="Legacy: append to a single JSON results file. Prefer --engagement, "
+                   "which auto-accumulates timestamped results in atomic-atlas-engagement/.")
+@click.option("--engagement", "engagement_dir", default=None, type=click.Path(),
+              help="Engagement directory for accumulating results. Default: "
+                   "ATOMIC_ATLAS_ENGAGEMENT_DIR env, else ./atomic-atlas-engagement/. "
+                   "Auto-created on first write.")
 @click.option("--authorized", is_flag=True, default=False,
               help="Confirm you are authorized to test this target (required)")
 @click.option("--hitl", is_flag=True, default=False,
@@ -92,7 +98,8 @@ def list_atomics(vector: str | None, technique: str | None, as_json: bool):
                    "Accepts an `atomic-atlas adapt` bundle (preferred — frontmatter + ## Payload "
                    "blockquote) or a plain text file (used verbatim).")
 def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
-          output: str, authorized: bool, hitl: bool, payload_file: str | None):
+          output: str | None, engagement_dir: str | None, authorized: bool,
+          hitl: bool, payload_file: str | None):
     """Run an atomic test against TARGET.
 
     ATOMIC_PATH: technique/vector, e.g. AML.T0051.001/rag_corpus
@@ -174,22 +181,89 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
         f"({result.success_rate:.0%}) in {result.duration_seconds:.1f}s"
     )
 
-    _append_result(result, Path(output))
+    target_id = (
+        (profile_data.get("target_context") or {}).get("target_id")
+        or (Path(profile).stem if profile else "")
+        or target
+    )
+
+    # Always append to the engagement dir (default ./atomic-atlas-engagement/).
+    from .engagement import Engagement
+    engagement = Engagement.from_env_or_default(engagement_dir)
+    engagement.append_result(
+        result,
+        atomic_path=str(md_path.relative_to(ATOMICS_DIR)) if md_path.is_relative_to(ATOMICS_DIR) else str(md_path),
+        target_id=target_id,
+        target_url=target,
+    )
+    click.echo(f"Appended to {engagement.results_path}")
+
+    # Legacy single-file mode: also write to --output if explicitly given.
+    if output:
+        _append_result(result, Path(output))
 
 
 @cli.command()
-@click.option("--input", "input_file", required=True, type=click.Path(exists=True), help="results.json from exec")
-@click.option("--format", "fmt", default="navigator", type=click.Choice(["navigator", "coverage", "markdown"]))
+@click.option("--input", "input_file", default=None, type=click.Path(exists=True),
+              help="Legacy: results.json from a single exec invocation. "
+                   "Prefer --engagement, which aggregates across runs.")
+@click.option("--engagement", "engagement_dir", default=None, type=click.Path(),
+              help="Engagement directory to read from (default: "
+                   "ATOMIC_ATLAS_ENGAGEMENT_DIR env, else ./atomic-atlas-engagement/).")
+@click.option("--format", "fmt", default="navigator",
+              type=click.Choice(["navigator", "coverage", "markdown", "findings"]))
 @click.option("--output", default=None, help="Output file (default: stdout)")
-def report(input_file: str, fmt: str, output: str | None):
-    """Generate a report from exec results."""
-    from .runner import RunResult
-    from .reporters import to_navigator_layer, print_coverage_matrix, write_markdown
+@click.option("--target", "target_filter", default=None,
+              help="Filter to one target_id (engagement source only).")
+@click.option("--since", default=None,
+              help="Filter to entries recorded after this ISO timestamp prefix "
+                   "(engagement source only).")
+def report(input_file: str | None, engagement_dir: str | None, fmt: str,
+           output: str | None, target_filter: str | None, since: str | None):
+    """Generate a report from exec results.
 
-    raw = json.loads(Path(input_file).read_text())
-    results = [RunResult(**{k: v for k, v in r.items() if k != "run_details"}) for r in raw]
-    for r, raw_r in zip(results, raw):
-        r.run_details = raw_r.get("run_details", [])
+    Two sources: --input (legacy, single results.json) or --engagement
+    (default, accumulated results.jsonl across runs). The findings
+    format requires the engagement source so it can aggregate.
+    """
+    from .runner import RunResult
+    from .reporters import (
+        to_navigator_layer,
+        print_coverage_matrix,
+        write_markdown,
+        aggregate_findings,
+        write_findings,
+    )
+
+    if input_file:
+        raw = json.loads(Path(input_file).read_text())
+        results = [RunResult(**{k: v for k, v in r.items() if k != "run_details"}) for r in raw]
+        for r, raw_r in zip(results, raw):
+            r.run_details = raw_r.get("run_details", [])
+        engagement_entries: list[dict] = raw  # for findings fallback
+    else:
+        from .engagement import Engagement
+        engagement = Engagement.from_env_or_default(engagement_dir)
+        if not engagement.results_path.exists():
+            click.echo(
+                f"ERROR: no results found at {engagement.results_path}. "
+                f"Run `atomic-atlas exec ...` first, or pass --input FILE.",
+                err=True,
+            )
+            sys.exit(2)
+        engagement_entries = list(
+            engagement.filtered_results(target_id=target_filter, since=since)
+        )
+        # Re-hydrate RunResult objects for the legacy reporters
+        results = []
+        for entry in engagement_entries:
+            data = {k: entry[k] for k in (
+                "atomic_path", "atlas_technique", "interaction_vector", "guid",
+                "total_runs", "successes", "failures", "errors", "duration_seconds",
+            ) if k in entry}
+            r = RunResult(**data)
+            r.run_details = entry.get("run_details", [])
+            results.append(r)
 
     if fmt == "navigator":
         layer = to_navigator_layer(results)
@@ -205,6 +279,23 @@ def report(input_file: str, fmt: str, output: str | None):
 
     elif fmt == "markdown":
         write_markdown(results, output)
+
+    elif fmt == "findings":
+        # Findings need the original entries (timestamps, target_id) +
+        # the atomic objects (for severity_floor + recommendations).
+        from .parser import load as _load_atomic
+        atomics_by_path: dict = {}
+        for entry in engagement_entries:
+            ap = entry.get("atomic_path", "")
+            if not ap or ap in atomics_by_path:
+                continue
+            try:
+                resolved = _resolve_atomic_path(ap)
+                atomics_by_path[ap] = _load_atomic(resolved)
+            except Exception:
+                pass  # let the reporter use its stub atomic
+        findings = aggregate_findings(engagement_entries, atomics_by_path=atomics_by_path)
+        write_findings(findings, output)
 
 
 @cli.command()
@@ -580,13 +671,18 @@ def runbook_list(rtype: str | None, tactic: str | None, as_json: bool):
 @click.argument("runbook_id_or_path")
 @click.option("--target", required=True, help="Target agent base URL")
 @click.option("--profile", default=None, type=click.Path(exists=True), help="Target profile YAML")
-@click.option("--output", default="runbook-results.json", show_default=True)
+@click.option("--output", default=None,
+              help="Legacy: write a single JSON file. Prefer --engagement.")
+@click.option("--engagement", "engagement_dir", default=None, type=click.Path(),
+              help="Engagement directory for accumulating results. Default: "
+                   "ATOMIC_ATLAS_ENGAGEMENT_DIR env, else ./atomic-atlas-engagement/.")
 @click.option("--authorized", is_flag=True, default=False,
               help="Confirm you are authorized to test this target (required)")
 @click.option("--hitl", is_flag=True, default=False,
               help="Human-in-the-loop: confirm each outbound message before send. Aborts propagate through the chain.")
 def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
-                output: str, authorized: bool, hitl: bool):
+                output: str | None, engagement_dir: str | None,
+                authorized: bool, hitl: bool):
     """Execute a runbook against TARGET."""
     if not authorized:
         click.echo("ERROR: --authorized flag required.", err=True)
@@ -628,19 +724,31 @@ def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
             f"in {sr.duration_seconds:.1f}s"
         )
 
-    payload = {
-        "runbook_id": result.runbook_id,
-        "runbook_path": result.runbook_path,
-        "guid": result.guid,
-        "runbook_type": result.runbook_type,
-        "atlas_tactics": result.atlas_tactics,
-        "chain_success": result.chain_success,
-        "stopped_at_step": result.stopped_at_step,
-        "duration_seconds": result.duration_seconds,
-        "step_results": [vars(sr) for sr in result.step_results],
-    }
-    Path(output).write_text(json.dumps(payload, indent=2))
-    click.echo(f"Results written to {output}")
+    target_id = (
+        (profile_data.get("target_context") or {}).get("target_id")
+        or (Path(profile).stem if profile else "")
+        or target
+    )
+
+    from .engagement import Engagement
+    engagement = Engagement.from_env_or_default(engagement_dir)
+    engagement.append_runbook_result(result, target_id=target_id, target_url=target)
+    click.echo(f"Appended to {engagement.runbook_results_path}")
+
+    if output:
+        payload = {
+            "runbook_id": result.runbook_id,
+            "runbook_path": result.runbook_path,
+            "guid": result.guid,
+            "runbook_type": result.runbook_type,
+            "atlas_tactics": result.atlas_tactics,
+            "chain_success": result.chain_success,
+            "stopped_at_step": result.stopped_at_step,
+            "duration_seconds": result.duration_seconds,
+            "step_results": [vars(sr) for sr in result.step_results],
+        }
+        Path(output).write_text(json.dumps(payload, indent=2))
+        click.echo(f"Results also written to {output}")
 
 
 

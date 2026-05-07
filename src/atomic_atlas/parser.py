@@ -41,6 +41,7 @@ class AtomicTest:
     judge_examples: list[dict[str, str]] | None = None  # {response, verdict, reason} triples
     scoring: dict[str, Any] | None = None  # scoring.strategy / refusal / judge_model
     extractors: list[dict[str, str]] | None = None  # [{name, pattern}] regex extractors
+    severity_floor: str | None = None  # informational | low | medium | high | critical
 
     @property
     def technique_dir(self) -> Path:
@@ -89,6 +90,7 @@ def load(path: Path | str, validate: bool = True) -> AtomicTest:
         judge_examples=frontmatter.get("judge_examples"),
         scoring=frontmatter.get("scoring"),
         extractors=frontmatter.get("extractors"),
+        severity_floor=frontmatter.get("severity_floor"),
     )
 
 

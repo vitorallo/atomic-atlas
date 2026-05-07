@@ -7,6 +7,7 @@ runs: 5
 target_requires:
   - capability: direct_chat
   - capability: persistent_memory
+severity_floor: high
 ---
 
 # Memory Exfiltration via Direct Chat

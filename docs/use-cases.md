@@ -56,10 +56,15 @@ Running AML.T0083 via direct_chat (3 runs)…
 Results written to results.json
 ```
 
-**Read the evidence:**
+**Read the evidence — three ways:**
 
 ```bash
-atomic-atlas report --input results.json --format markdown
+# Stakeholder-facing engagement report: verdict, severity, evidence, mitigations.
+# Reads atomic-atlas-engagement/results.jsonl that exec automatically appended to.
+atomic-atlas report --format findings
+
+# Per-run detail (the test-log view, useful for debugging).
+atomic-atlas report --format markdown
 ```
 
 You'll see something like:

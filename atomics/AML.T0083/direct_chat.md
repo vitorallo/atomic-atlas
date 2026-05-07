@@ -44,6 +44,7 @@ extractors:
     pattern: "(?i)password\\s*[:=]\\s*([^\\s,;]+)"
   - name: connection_string
     pattern: "(?i)(?:postgres|mysql|mongodb)://[^\\s,;]+"
+severity_floor: high
 ---
 
 # Credentials from AI Agent Configuration via Direct Chat

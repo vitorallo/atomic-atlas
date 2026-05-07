@@ -150,7 +150,8 @@ atomic-atlas exec <ATOMIC_PATH> --target <URL> [--profile <P>] [...]
 | `--target TEXT` | **Required.** Target agent base URL. |
 | `--profile PATH` | Target profile YAML (adapters per vector + `target_context`). |
 | `--runs INTEGER` | Override the atomic's `runs` field. |
-| `--output TEXT` | Output file for results JSON (default: `results.json`; appends if exists). |
+| `--output TEXT` | Legacy: append to a single results JSON file. Prefer `--engagement`, which auto-accumulates to `atomic-atlas-engagement/results.jsonl` in your cwd. |
+| `--engagement PATH` | Engagement directory for accumulating results. Default: `ATOMIC_ATLAS_ENGAGEMENT_DIR` env, else `./atomic-atlas-engagement/`. Auto-created. |
 | `--authorized` | **Required flag.** Confirms you have authorization to test the target. |
 | `--hitl` | Human-in-the-loop: confirm each outbound message before send. |
 | `--payload-file PATH` | Override the atomic's `seed_prompt` with the payload from this file. Accepts `atomic-atlas adapt` bundles (parsed) or plain text (used verbatim). |
@@ -204,32 +205,72 @@ See [`docs/scoring.md`](scoring.md) for the scorer-tier details.
 
 ## `report`
 
-Render results from `exec` into a Navigator layer, coverage matrix, or evidence-rich markdown.
+Render accumulated atomic-atlas results — Navigator layer, coverage matrix, evidence-rich markdown, or stakeholder-facing **engagement findings**.
 
 ```bash
-atomic-atlas report --input <FILE> --format <FMT> [--output <FILE>]
+atomic-atlas report [--engagement DIR | --input FILE] --format <FMT> [--output FILE] [--target ID] [--since TS]
 ```
 
 | Flag | Purpose |
 |---|---|
-| `--input PATH` | **Required.** `results.json` from `exec`. |
-| `--format navigator\|coverage\|markdown` | Output format. Default: `navigator`. |
+| `--engagement PATH` | Engagement directory to read from. Default: `ATOMIC_ATLAS_ENGAGEMENT_DIR` env, else `./atomic-atlas-engagement/`. Reads `results.jsonl` accumulated across `exec` runs. |
+| `--input PATH` | Legacy: a single `results.json` from one `exec` invocation. Mutually exclusive with `--engagement`. |
+| `--format navigator\|coverage\|markdown\|findings` | Output format. Default: `navigator`. The `findings` format requires the engagement source (it aggregates across runs). |
 | `--output TEXT` | Write to file (default: stdout). |
+| `--target TEXT` | Filter to one `target_id` (engagement source only). |
+| `--since TEXT` | ISO-8601 timestamp prefix; only entries recorded after this. (engagement source only). |
 
 **Examples:**
 
 ```bash
+# Stakeholder-facing engagement report — verdict + severity per (atomic, target).
+atomic-atlas report --format findings --output engagement-report.md
+
+# Same, but only one target's results
+atomic-atlas report --format findings --target dvaa_legacybot
+
+# Only this week's runs
+atomic-atlas report --format findings --since 2026-05-05
+
 # ATLAS Navigator JSON layer (open at https://mitre-atlas.github.io/atlas-navigator/)
-atomic-atlas report --input results.json --format navigator --output dvaa.layer.json
+atomic-atlas report --format navigator --output dvaa.layer.json
 
 # Compact coverage matrix in the terminal.
-atomic-atlas report --input results.json --format coverage
+atomic-atlas report --format coverage
 
 # Markdown report with per-run evidence inline.
-atomic-atlas report --input results.json --format markdown --output report.md
+atomic-atlas report --format markdown --output detailed.md
+
+# Legacy single-file mode still works
+atomic-atlas report --input legacy-results.json --format markdown
 ```
 
-The markdown format renders the evidence dict per run — `tier`, judge reasoning, matched indicators, extracted artifacts. Useful for sharing with stakeholders.
+### About the engagement directory
+
+Every `exec` and `runbook exec` invocation appends a timestamped entry to:
+
+```
+atomic-atlas-engagement/
+    results.jsonl           # one JSON object per atomic run
+    runbook-results.jsonl   # one JSON object per runbook step
+    adapted-payloads/       # bundles produced by `adapt --output`
+    recon/                  # outputs of `recon` (if you save them here)
+    reports/                # rendered findings / navigator / markdown
+```
+
+The dir auto-initializes on first write. Override location with `--engagement` per-call or `ATOMIC_ATLAS_ENGAGEMENT_DIR` in `.env` (one folder per customer / scope is the natural pattern). Schema-stable JSONL: each line stamped with `engagement_id`, `recorded_at`, `target_id`, `atomic_path`, plus the full RunResult.
+
+### About findings
+
+`--format findings` aggregates the JSONL into one `Finding` per `(atomic, target)` tuple, with:
+
+- **Verdict**: `VULNERABLE` / `PARTIALLY_VULNERABLE` / `NOT_VULNERABLE` / `INCONCLUSIVE`.
+- **Severity**: derived from success rate × evidence richness × atomic frontmatter `severity_floor`.
+- **Summary**: 1-2 sentences from the strongest judge reasoning across runs.
+- **Evidence**: deduplicated extracted artifacts (e.g., harvested credentials), representative response excerpt.
+- **Recommendations**: bullets parsed from the atomic's `## ATLAS mitigations` section.
+
+No new LLM call — fully derived from the data already collected.
 
 ---
 
@@ -271,7 +312,8 @@ atomic-atlas runbook exec <RUNBOOK_ID_OR_PATH> --target <URL> [--profile <P>] [.
 |---|---|
 | `--target TEXT` | **Required.** Target agent base URL. |
 | `--profile PATH` | Target profile YAML. |
-| `--output TEXT` | Output file (default: `runbook-results.json`). |
+| `--output TEXT` | Legacy: write a single JSON file. Prefer `--engagement`. |
+| `--engagement PATH` | Engagement directory (default: `./atomic-atlas-engagement/`). Same shape as `exec`. |
 | `--authorized` | **Required flag.** |
 | `--hitl` | Human-in-the-loop on every outbound. Operator abort propagates. |
 

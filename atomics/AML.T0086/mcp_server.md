@@ -27,6 +27,7 @@ extractors:
     pattern: "iam/security-credentials/[A-Za-z0-9_\\-]+"
   - name: ec2_instance_id
     pattern: "i-[0-9a-f]{8,17}"
+severity_floor: high
 ---
 
 # Data Exfiltration via Malicious MCP Tool
