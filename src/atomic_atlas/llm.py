@@ -45,15 +45,37 @@ def is_offline() -> bool:
     return os.environ.get("ATOMIC_ATLAS_OFFLINE") == "1"
 
 
-def has_api_key() -> bool:
-    """True when an LLM call would have a real (non-placeholder) key.
+def _is_external_provider() -> bool:
+    """True when ``OPENAI_API_BASE`` points at a non-OpenAI endpoint.
 
-    This is the gate the runner's tier-selection / attacker-LLM branches
-    use to decide whether to attempt the LLM path. Returns False if
-    ``ATOMIC_ATLAS_OFFLINE=1`` is set.
+    For OpenRouter / Ollama / vLLM / LiteLLM and similar OpenAI-compatible
+    providers, the operator may legitimately have an empty / placeholder
+    ``OPENAI_API_KEY`` (Ollama, for example, ignores the key entirely).
+    The upstream provider will reject invalid auth at request time, so we
+    don't need to second-guess at the gate.
+    """
+    base = os.environ.get("OPENAI_API_BASE", "").strip()
+    if not base:
+        return False
+    return not base.startswith("https://api.openai.com")
+
+
+def has_api_key() -> bool:
+    """True when an LLM call site should attempt a real call.
+
+    Returns False when ``ATOMIC_ATLAS_OFFLINE=1`` is set. Otherwise:
+
+    - **External provider** (``OPENAI_API_BASE`` points anywhere other
+      than ``api.openai.com``) → trust the operator's setup. Local LLMs
+      and OpenAI-compatible proxies often don't require a real key, and
+      misconfigured ones will fail loudly at HTTP time.
+    - **OpenAI default endpoint** → require a real, non-placeholder
+      ``OPENAI_API_KEY``.
     """
     if is_offline():
         return False
+    if _is_external_provider():
+        return True
     key = os.environ.get("OPENAI_API_KEY", "")
     if not key:
         return False
@@ -102,12 +124,15 @@ async def complete(*, system: str, user: str, model: Optional[str] = None) -> st
     if not has_api_key():
         raise RuntimeError(
             "OPENAI_API_KEY missing or placeholder (or ATOMIC_ATLAS_OFFLINE=1 "
-            "is set). Set a real key, or point OPENAI_API_BASE at a "
-            "LiteLLM-style proxy."
+            "is set). Either set a real key, or point OPENAI_API_BASE at a "
+            "non-OpenAI provider (OpenRouter, Ollama, vLLM, LiteLLM)."
         )
     from openai import AsyncOpenAI
     client = AsyncOpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
+        # Default to "unused" for providers that don't validate the key
+        # (Ollama, some local llama.cpp setups). The OpenAI SDK requires
+        # api_key to be a non-None string.
+        api_key=os.environ.get("OPENAI_API_KEY") or "unused",
         base_url=os.environ.get("OPENAI_API_BASE"),
     )
     response = await client.chat.completions.create(

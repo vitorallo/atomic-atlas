@@ -157,6 +157,7 @@ atomic-atlas exec <ATOMIC_PATH> --target <URL> [--profile <P>] [...]
 | `--authorized` | **Required flag.** Confirms you have authorization to test the target. |
 | `--hitl` | Human-in-the-loop: confirm each outbound message before send. |
 | `--payload-file PATH` | Override the atomic's `seed_prompt` with the payload from this file. Accepts `atomic-atlas adapt` bundles (parsed) or plain text (used verbatim). |
+| `--model NAME` | Override the LLM model for this run (attacker LLM + judge). Sets `ATOMIC_ATLAS_LLM_MODEL`. Examples: `gpt-4o-mini` (OpenAI), `google/gemma-2-9b-it:free` (OpenRouter), `qwen2.5:7b` (Ollama). See [docs/install.md](install.md#llm-providers--openai-openrouter-ollama-local-llms) for provider setup. |
 
 **Examples:**
 
@@ -192,10 +193,12 @@ Useful environment variables:
 
 | Variable | Effect |
 |---|---|
-| `OPENAI_API_KEY` | Required for the LLM judge tier and for `RedTeamingOrchestrator`'s attacker LLM. |
-| `OPENAI_API_BASE` | OpenAI-compatible proxy (LiteLLM, vLLM). |
-| `ATOMIC_ATLAS_LLM_MODEL` | LLM model name used by the judge, attacker, and adapter (default `gpt-4o`). |
+| `OPENAI_API_KEY` | API key for the LLM provider. Required for OpenAI; optional for Ollama / local LLMs that don't validate it. |
+| `OPENAI_API_BASE` | LLM endpoint. Default `https://api.openai.com/v1`. Set to `https://openrouter.ai/api/v1`, `http://localhost:11434/v1` (Ollama), or any OpenAI-compatible URL. |
+| `ATOMIC_ATLAS_LLM_MODEL` | LLM model name used by the judge, attacker, and adapter (default `gpt-4o`). Whatever your `OPENAI_API_BASE` provider supports. |
 | `ATOMIC_ATLAS_OFFLINE=1` | Disable every LLM call site (judge tier, attacker LLM, adapter). Forces deterministic indicator scoring + `PromptSendingAttack`. |
+
+See [docs/install.md](install.md#llm-providers--openai-openrouter-ollama-local-llms) for provider-by-provider setup (OpenRouter free models, Ollama, vLLM, LiteLLM).
 
 A few additional vars exist for tests / development (`ATOMIC_ATLAS_ATOMICS_DIR`, `ATOMIC_ATLAS_SKIP_DOTENV`, `ATOMIC_ATLAS_PYRIT_DB`, `ATOMIC_ATLAS_EVIDENCE_SNIPPET_MAX`); they're stable but not part of the operator surface.
 

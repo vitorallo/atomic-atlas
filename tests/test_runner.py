@@ -171,3 +171,31 @@ def test_load_profile_resolves_env_substitutions(tmp_path, monkeypatch):
     assert profile["target_context"]["expected_tools"] == ["tool_with_sk-resolved-12345"]
     # Non-string scalars untouched
     assert profile["base_url"] == "http://localhost:7003/v1"
+
+
+def test_has_api_key_external_provider_skips_placeholder_check(monkeypatch):
+    """When OPENAI_API_BASE points at a non-OpenAI provider (OpenRouter,
+    Ollama, vLLM, LiteLLM), placeholder/empty keys are accepted — the
+    upstream provider gates auth itself."""
+    from atomic_atlas.llm import has_api_key
+
+    monkeypatch.delenv("ATOMIC_ATLAS_OFFLINE", raising=False)
+
+    # Default OpenAI endpoint with empty key → False
+    monkeypatch.setenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert has_api_key() is False
+
+    # OpenRouter endpoint with placeholder key → True (operator's intent)
+    monkeypatch.setenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "unused")
+    assert has_api_key() is True
+
+    # Ollama local endpoint with no key → True
+    monkeypatch.setenv("OPENAI_API_BASE", "http://localhost:11434/v1")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert has_api_key() is True
+
+    # Offline overrides everything
+    monkeypatch.setenv("ATOMIC_ATLAS_OFFLINE", "1")
+    assert has_api_key() is False
