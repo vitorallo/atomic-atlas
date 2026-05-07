@@ -107,7 +107,6 @@ atomic-atlas adapt <TECHNIQUE/VECTOR> --profile <P> [...]
 | `--recon PATH` | Optional `atomic-atlas recon` JSON output. |
 | `--observed PATH` | Optional `results.json` with prior-run evidence to feed in. |
 | `--output PATH` | Write the bundle to a file (default: stdout). |
-| `--model TEXT` | Override generator LLM model (default: `ATOMIC_ATLAS_ADAPTER_MODEL` or `gpt-4o`). |
 | `--target-id TEXT` | Identifier in the bundle's `target_id` field (default: profile filename stem). |
 | `--include-seed / --no-seed` | Include the existing payload seed as a shape reference (default: include). |
 | `--include-same-technique` | Include same-technique entries when feeding observed evidence (default: skip them). |
@@ -128,10 +127,8 @@ atomic-atlas adapt AML.T0083/direct_chat \
   --observed results-from-T0084.json \
   --output adapted.md
 
-# Cheaper model for iteration.
-atomic-atlas adapt AML.T0083/direct_chat \
-  --profile targets/dvaa_legacybot.yaml \
-  --model gpt-4o-mini --output adapted.md
+# For a cheaper model, set ATOMIC_ATLAS_LLM_MODEL=gpt-4o-mini in .env
+# (or any model your OPENAI_API_BASE provider supports — see docs/install.md).
 
 # Dry-run: print the prompt, don't call the LLM.
 atomic-atlas adapt AML.T0083/direct_chat \
@@ -157,7 +154,6 @@ atomic-atlas exec <ATOMIC_PATH> --target <URL> [--profile <P>] [...]
 | `--authorized` | **Required flag.** Confirms you have authorization to test the target. |
 | `--hitl` | Human-in-the-loop: confirm each outbound message before send. |
 | `--payload-file PATH` | Override the atomic's `seed_prompt` with the payload from this file. Accepts `atomic-atlas adapt` bundles (parsed) or plain text (used verbatim). |
-| `--model NAME` | Override the LLM model for this run (attacker LLM + judge). Sets `ATOMIC_ATLAS_LLM_MODEL`. Examples: `gpt-4o-mini` (OpenAI), `google/gemma-2-9b-it:free` (OpenRouter), `qwen2.5:7b` (Ollama). See [docs/install.md](install.md#llm-providers--openai-openrouter-ollama-local-llms) for provider setup. |
 
 **Examples:**
 

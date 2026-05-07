@@ -116,7 +116,7 @@ Environment variables:
 | `ATOMIC_ATLAS_ADAPTER_MODEL` | Generator model. | `gpt-4o` |
 | `ATOMIC_ATLAS_ATTACKER_MODEL` | Fallback for the generator model. | `gpt-4o` |
 
-CLI flags override env vars (`--model gpt-4o-mini`).
+Pin all of these in repo-root `.env` (auto-loaded; `.env` wins over the shell). No CLI flags for model selection — keeping the CLI surface tight. See [`docs/install.md`](install.md#llm-providers--openai-openrouter-ollama-local-llms) for OpenRouter / Ollama / vLLM setup.
 
 ## Handing off to `exec`
 

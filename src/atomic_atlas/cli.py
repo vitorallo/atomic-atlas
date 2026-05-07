@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -91,14 +90,8 @@ def list_atomics(vector: str | None, technique: str | None, as_json: bool):
               help="Override the atomic's seed_prompt with the payload from this file. "
                    "Accepts an `atomic-atlas adapt` bundle (preferred — frontmatter + ## Payload "
                    "blockquote) or a plain text file (used verbatim).")
-@click.option("--model", "model", default=None,
-              help="Override the LLM model name used by both the attacker LLM (RedTeamingAttack) "
-                   "and the judge tier. Sets ATOMIC_ATLAS_LLM_MODEL for the duration of this run. "
-                   "Use any model your OPENAI_API_BASE provider supports — e.g., 'gpt-4o-mini' on "
-                   "OpenAI, 'google/gemma-2-9b-it:free' on OpenRouter, 'qwen2.5:7b' on Ollama.")
 def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
-          output: str, authorized: bool, hitl: bool, payload_file: str | None,
-          model: str | None):
+          output: str, authorized: bool, hitl: bool, payload_file: str | None):
     """Run an atomic test against TARGET.
 
     ATOMIC_PATH: technique/vector, e.g. AML.T0051.001/rag_corpus
@@ -106,9 +99,6 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
     if not authorized:
         click.echo("ERROR: --authorized flag required. Only run against systems you own or have written permission to test.", err=True)
         sys.exit(1)
-
-    if model:
-        os.environ["ATOMIC_ATLAS_LLM_MODEL"] = model
 
     from .parser import load
     from .runner import (
@@ -294,8 +284,6 @@ def validate(path: str | None):
               help="Optional results.json with prior-run evidence to feed in")
 @click.option("--output", "output_file", default=None, type=click.Path(),
               help="Write the adapted bundle to this file (default: stdout)")
-@click.option("--model", default=None,
-              help="Override generator LLM model (default: ATOMIC_ATLAS_ADAPTER_MODEL or gpt-4o)")
 @click.option("--target-id", default=None,
               help="Identifier for the bundle's target_id field (default: profile filename stem)")
 @click.option("--include-seed/--no-seed", "include_seed", default=True,
@@ -310,7 +298,6 @@ def adapt_cmd(
     recon_file: str | None,
     observed_file: str | None,
     output_file: str | None,
-    model: str | None,
     target_id: str | None,
     include_seed: bool,
     include_same_technique: bool,
@@ -410,7 +397,6 @@ def adapt_cmd(
             observed=observed,
             seed_text=seed_text,
             target_id=resolved_target_id,
-            model=model,
             include_same_technique=include_same_technique,
         ))
     except AdaptationParseError as exc:

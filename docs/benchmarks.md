@@ -100,6 +100,50 @@ atomic-atlas exec AML.T0083/direct_chat \
 
 `results.json` accumulates across runs; `atomic-atlas report --input results.json --format markdown` renders the full evidence inline (judge reasoning, matched indicators, extracted artifacts).
 
+## Runbooks: cost + runtime
+
+Single atomic runs are tractable to budget; runbooks aren't, because each step's RedTeamingAttack mutates over many turns. One real measurement from this session:
+
+**`atomic-atlas runbook exec RB-DVAA-L1-01 --target http://localhost:7002/v1 --profile targets/dvaa_local.yaml --runs 5 --authorized`**
+
+| Metric | Value |
+|---|---|
+| Wall time | 753.8s (12.5 min) |
+| atomic-atlas successes | 1/5 (20%) — judge cited a system-prompt leak on run 1 |
+| OpenAI calls | ~60 (5 runs × ~6 attacker-mutation turns × 1 attacker + 1 judge call) |
+| DVAA `/api/attack-log` delta | +32 entries (the multi-turn attacker probed 6 times per run) |
+| Estimated `gpt-4o` credit | ~$0.30–0.80 |
+
+The 12.5-minute wall time wasn't a stuck process — RedTeamingAttack defaults to a generous `max_turns`, and HelperBot keeps deflecting, so the attacker LLM keeps mutating turn after turn looking for a hit. That's the architecture working honestly. **It also burns tokens.**
+
+### Cost levers (set in `.env`)
+
+| Setting | Per-runbook cost | When to use |
+|---|---|---|
+| `ATOMIC_ATLAS_LLM_MODEL=gpt-4o` (default) | ~$0.30–0.80 | Engagement work where verdict honesty matters |
+| `ATOMIC_ATLAS_LLM_MODEL=gpt-4o-mini` | ~$0.02–0.05 | Iteration / dev loop |
+| OpenRouter free tier (`google/gemma-2-9b-it:free`, etc.) | $0 | Bulk smoke testing; expect 429 backoffs |
+| Ollama local (`qwen2.5:7b`) | $0 | Air-gapped or zero-cost; bound by your hardware |
+| `ATOMIC_ATLAS_OFFLINE=1` | $0 | Smoke testing the runner mechanically without any LLM |
+
+All of these go in **repo-root `.env`** — atomic-atlas auto-loads it on import (`.env` wins over the shell). There's no CLI flag for model selection, by design: keeps `exec` and `adapt` surfaces minimal.
+
+### Reducing runbook cost without changing models
+
+- **Lower `runs:` per atomic in the runbook** (5 → 2 or 3). Linear reduction; `runs: 5` came from v0.1's "binary verdicts are noisy" reasoning, but 3 is usually enough once the judge tier is on.
+- **Set `multi_turn: false` on atomics that don't need attacker-LLM mutation.** Single-turn deterministic sends are ~10× cheaper because they skip the multi-turn loop entirely.
+- **Use `scoring.judge_model: gpt-4o-mini` in atomic frontmatter** for atomics where judge precision is less critical, even if you keep the attacker LLM stronger globally.
+
+### When to expect long runtimes
+
+| Pattern | Rough range |
+|---|---|
+| Single-turn atomic (`multi_turn: false`) × N runs | ~3s × N |
+| Multi-turn, target hits scripted match early | ~5–15s × N |
+| Multi-turn, attacker LLM working hard against wrong-target pairing | ~30–60s × N |
+
+If a runbook is taking 10+ minutes and you suspect the attacker LLM is mutating against an atomic-target mismatch, kill it with Ctrl-C and rerun with a different atomic or a tighter `runs:` count.
+
 ## What this validates
 
 1. **Judge tier is honest.** It produced 3 different verdicts on essentially the same CodeBot response data, scored against 3 different success criteria. No false positives across any run.

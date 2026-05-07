@@ -61,72 +61,71 @@ atomic-atlas validate                     # check the seed catalog
 
 ## LLM providers — OpenAI, OpenRouter, Ollama, local LLMs
 
-The judge tier and the attacker LLM both use the same OpenAI-compatible client. Point them anywhere via two env vars:
+The judge tier and the attacker LLM both use the same OpenAI-compatible client. Point them anywhere via three env vars in your repo-root `.env` (auto-loaded on import; `.env` wins over the shell):
 
-| Provider | `OPENAI_API_BASE` | `OPENAI_API_KEY` | Example `--model` |
+| Provider | `OPENAI_API_BASE` | `OPENAI_API_KEY` | `ATOMIC_ATLAS_LLM_MODEL` |
 |---|---|---|---|
 | **OpenAI** (default) | `https://api.openai.com/v1` | real `sk-...` | `gpt-4o`, `gpt-4o-mini` |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | `sk-or-v1-...` | `google/gemma-2-9b-it:free`, `qwen/qwen-2.5-7b-instruct:free`, `mistralai/mistral-7b-instruct:free`, `meta-llama/llama-3.2-3b-instruct:free` |
-| **Ollama** (local) | `http://localhost:11434/v1` | any (Ollama ignores it) | `qwen2.5:7b`, `gemma2:9b`, `llama3.2:3b` |
-| **vLLM** (local/server) | `http://your-host:8000/v1` | any | the model name vLLM was launched with |
+| **Ollama** (local) | `http://localhost:11434/v1` | (omit — Ollama ignores it) | `qwen2.5:7b`, `gemma2:9b`, `llama3.2:3b` |
+| **vLLM** (local/server) | `http://your-host:8000/v1` | (any) | the model name vLLM was launched with |
 | **LiteLLM proxy** | `http://your-proxy:4000/v1` | proxy's key | anything LiteLLM is configured to route |
 
 Atomic-atlas detects "external provider" automatically: when `OPENAI_API_BASE` points anywhere other than `api.openai.com`, the placeholder-key check is skipped and the operator's setup is trusted (the upstream rejects invalid auth at request time).
 
-**OpenRouter (cheap or free models) — full setup:**
+**OpenRouter (free or super-cheap models)** — drop into `.env`:
+
+```dotenv
+# .env
+OPENAI_API_BASE=https://openrouter.ai/api/v1
+OPENAI_API_KEY=sk-or-v1-your-key-here
+ATOMIC_ATLAS_LLM_MODEL=google/gemma-2-9b-it:free
+```
+
+Then run normally:
 
 ```bash
-export OPENAI_API_BASE=https://openrouter.ai/api/v1
-export OPENAI_API_KEY=sk-or-v1-your-key-here
-
 atomic-atlas exec AML.T0083/direct_chat \
   --target http://localhost:7003/v1 \
   --profile targets/dvaa_legacybot.yaml \
-  --runs 3 --authorized \
-  --model "google/gemma-2-9b-it:free"
+  --runs 3 --authorized
 ```
 
-`--model` is per-run; you can also set `ATOMIC_ATLAS_LLM_MODEL=...` once for the shell. The model is used for both the attacker LLM (in `RedTeamingAttack`) and the judge tier scorer.
+The same model is used by the attacker LLM (in `RedTeamingAttack`) and the judge tier scorer. Per-atomic judge override is available in the atomic's frontmatter if you want a stronger judge than attacker:
 
-**Ollama (local) — full setup:**
+```yaml
+# atomics/<technique>/<vector>.md
+scoring:
+  judge_model: gpt-4o   # judge uses this; attacker uses ATOMIC_ATLAS_LLM_MODEL
+```
+
+**Ollama (local)** — drop into `.env`:
+
+```dotenv
+# .env
+OPENAI_API_BASE=http://localhost:11434/v1
+ATOMIC_ATLAS_LLM_MODEL=qwen2.5:7b
+# OPENAI_API_KEY left unset; Ollama doesn't validate it
+```
+
+Bring up Ollama with the model first:
 
 ```bash
-# Bring up Ollama with a model:
-ollama serve
+ollama serve &
 ollama pull qwen2.5:7b
-
-# Point atomic-atlas at it:
-export OPENAI_API_BASE=http://localhost:11434/v1
-unset OPENAI_API_KEY     # not required by Ollama
-
-atomic-atlas exec AML.T0083/direct_chat \
-  --target http://localhost:7003/v1 \
-  --profile targets/dvaa_legacybot.yaml \
-  --runs 3 --authorized \
-  --model qwen2.5:7b
 ```
 
-**Per-call overrides** (different judge model than attacker model):
-
-```bash
-# Use cheap model for the attacker LLM, but the atomic's frontmatter can
-# pin a stronger judge model for evaluation:
-#
-#   scoring:
-#     judge_model: gpt-4o
-#
-# Attacker uses --model / ATOMIC_ATLAS_LLM_MODEL; judge uses scoring.judge_model.
-```
+Then run as usual. No CLI flag changes needed — the `.env` is the single source of truth.
 
 **Cost lever cheat-sheet** (high-cost → low-cost):
 
 | Setup | Per-atomic cost (5 runs) | Notes |
 |---|---|---|
 | `gpt-4o` (default) | ~$0.30-0.80 | Honest verdicts, fast |
-| `--model gpt-4o-mini` | ~$0.02-0.05 | Slight judge-quality hit; usually fine |
+| `gpt-4o-mini` (set in `.env`) | ~$0.02-0.05 | Slight judge-quality hit; usually fine |
 | OpenRouter `:free` model | $0 | Rate-limited; some 429s |
 | Ollama local | $0 | Bound by your hardware |
-| `ATOMIC_ATLAS_OFFLINE=1` | $0 | No LLM at all; falls back to deterministic indicator scoring |
+| `ATOMIC_ATLAS_OFFLINE=1` (in `.env`) | $0 | No LLM at all; falls back to deterministic indicator scoring |
 
 ## Common errors
 
