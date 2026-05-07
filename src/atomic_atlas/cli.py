@@ -231,6 +231,153 @@ def validate(atomic_path: str | None):
         click.echo(f"\nAll {len(paths)} atomic(s) valid.")
 
 
+@cli.command(name="adapt")
+@click.argument("atomic_path")
+@click.option("--profile", required=True, type=click.Path(exists=True),
+              help="Target profile YAML")
+@click.option("--recon", "recon_file", default=None, type=click.Path(exists=True),
+              help="Optional atomic-atlas recon JSON output")
+@click.option("--observed", "observed_file", default=None, type=click.Path(exists=True),
+              help="Optional results.json with prior-run evidence to feed in")
+@click.option("--output", "output_file", default=None, type=click.Path(),
+              help="Write the adapted bundle to this file (default: stdout)")
+@click.option("--model", default=None,
+              help="Override generator LLM model (default: ATOMIC_ATLAS_ADAPTER_MODEL or gpt-4o)")
+@click.option("--target-id", default=None,
+              help="Identifier for the bundle's target_id field (default: profile filename stem)")
+@click.option("--include-seed/--no-seed", "include_seed", default=True,
+              help="Include the existing seed payload as a shape reference")
+@click.option("--include-same-technique", is_flag=True, default=False,
+              help="Include same-technique entries when feeding observed evidence")
+@click.option("--no-llm", is_flag=True, default=False,
+              help="Print the would-be prompt and exit (no LLM call)")
+def adapt_cmd(
+    atomic_path: str,
+    profile: str,
+    recon_file: str | None,
+    observed_file: str | None,
+    output_file: str | None,
+    model: str | None,
+    target_id: str | None,
+    include_seed: bool,
+    include_same_technique: bool,
+    no_llm: bool,
+) -> None:
+    """Generate an LLM-tuned initial payload for an atomic against a target.
+
+    Reads the atomic's intent + the profile's target_context (+ optional
+    recon and observed-evidence inputs) and asks an LLM to produce a
+    domain-tuned payload bundle. The bundle is markdown — review it,
+    optionally save it under atomics/<technique>/payloads/, then run
+    `atomic-atlas exec` against the saved file.
+
+    See openspec/changes/payload-adapter/proposal.md for the design.
+    """
+    import asyncio
+    from .parser import load
+    from .runner import load_profile
+    from .payload_adapter import (
+        Adaptation,
+        AdaptationParseError,
+        adapt as _adapt_async,
+        build_prompt,
+    )
+
+    try:
+        atomic = load(_resolve_atomic_path(atomic_path))
+    except Exception as exc:
+        click.echo(f"ERROR: cannot load atomic {atomic_path!r}: {exc}", err=True)
+        sys.exit(2)
+
+    try:
+        profile_data = load_profile(Path(profile))
+    except Exception as exc:
+        click.echo(f"ERROR: cannot load profile {profile!r}: {exc}", err=True)
+        sys.exit(2)
+
+    recon_data: dict | None = None
+    if recon_file:
+        try:
+            recon_data = json.loads(Path(recon_file).read_text(encoding="utf-8"))
+        except Exception as exc:
+            click.echo(f"ERROR: cannot read --recon {recon_file!r}: {exc}", err=True)
+            sys.exit(2)
+
+    observed: list[dict] | None = None
+    if observed_file:
+        try:
+            raw = json.loads(Path(observed_file).read_text(encoding="utf-8"))
+        except Exception as exc:
+            click.echo(f"ERROR: cannot read --observed {observed_file!r}: {exc}", err=True)
+            sys.exit(2)
+        # results.json is a list of RunResult dicts; flatten to per-run details.
+        observed = []
+        for r in raw if isinstance(raw, list) else []:
+            for d in r.get("run_details", []):
+                if "evidence" in d:
+                    observed.append({
+                        "evidence": d["evidence"],
+                        "atlas_technique": r.get("atlas_technique"),
+                        "target_id": (
+                            (profile_data.get("target_context") or {}).get("target_id")
+                            or Path(profile).stem
+                        ),
+                    })
+
+    # Resolve target_id default.
+    resolved_target_id = (
+        target_id
+        or (profile_data.get("target_context") or {}).get("target_id")
+        or Path(profile).stem
+    )
+
+    # Optional seed payload as shape reference.
+    seed_text: str | None = None
+    if include_seed and atomic.payloads_dir.exists():
+        for candidate in sorted(atomic.payloads_dir.glob("*.md")):
+            seed_text = candidate.read_text(encoding="utf-8")
+            break
+
+    if no_llm:
+        system_prompt, user_prompt = build_prompt(
+            atomic, profile_data,
+            recon=recon_data, observed=observed, seed_text=seed_text,
+            target_id=resolved_target_id,
+        )
+        click.echo("=== SYSTEM PROMPT ===")
+        click.echo(system_prompt)
+        click.echo("=== USER PROMPT ===")
+        click.echo(user_prompt)
+        return
+
+    try:
+        adaptation: Adaptation = asyncio.run(_adapt_async(
+            atomic, profile_data,
+            recon=recon_data,
+            observed=observed,
+            seed_text=seed_text,
+            target_id=resolved_target_id,
+            model=model,
+            include_same_technique=include_same_technique,
+        ))
+    except AdaptationParseError as exc:
+        click.echo(f"ERROR: adapter LLM output failed parsing: {exc}", err=True)
+        click.echo("--- raw LLM output ---", err=True)
+        click.echo(exc.raw_output, err=True)
+        sys.exit(3)
+    except Exception as exc:
+        click.echo(f"ERROR: adapter LLM call failed: {exc}", err=True)
+        sys.exit(3)
+
+    bundle = adaptation.to_markdown()
+
+    if output_file:
+        Path(output_file).write_text(bundle, encoding="utf-8")
+        click.echo(f"Adapted payload written to {output_file}")
+    else:
+        click.echo(bundle)
+
+
 def _resolve_atomic_path(atomic_path: str) -> Path:
     p = Path(atomic_path)
     if p.exists():
