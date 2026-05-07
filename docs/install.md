@@ -170,12 +170,4 @@ By default this initializes an in-memory SQLite store. Override with `ATOMIC_ATL
 
 ## Attacker LLM
 
-`exec` with `RedTeamingOrchestrator`-class atomics needs an attacker LLM to generate payload variants. atomic-atlas defaults to OpenAI, configurable via env:
-
-```bash
-export OPENAI_API_KEY=sk-...
-export ATOMIC_ATLAS_ATTACKER_MODEL=gpt-4o            # default
-export OPENAI_API_BASE=https://api.openai.com/v1     # default
-```
-
-To use a non-OpenAI provider (Anthropic, Bedrock, Ollama, etc.), point `OPENAI_API_BASE` at an OpenAI-compatible proxy like [LiteLLM](https://github.com/BerriAI/litellm). PyRIT 0.13 does not yet ship a first-class Anthropic chat target.
+`exec` with multi-turn atomics (frontmatter `multi_turn: true`, default) uses an attacker LLM to generate payload variants. The same model serves the LLM judge tier. Configure in repo-root `.env` — see the **LLM providers** section above for OpenRouter / Ollama / vLLM / LiteLLM-specific snippets.

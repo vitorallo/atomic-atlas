@@ -121,27 +121,22 @@ For more complex extraction (parsing JSON tool responses, structured memory entr
 
 ## Overriding the auto-selection
 
-The selection priority is: per-atomic `scoring.strategy` > `ATOMIC_ATLAS_SCORING` env > auto.
+The selection priority is: per-atomic `scoring.strategy` > auto.
 
 ### Per-atomic override
 
 ```yaml
 scoring:
-  strategy: indicators       # auto | judge | indicators | substring | composite
-  refusal_check: cheap       # off | cheap | llm
-  judge_model: gpt-4o-mini   # override the global ATOMIC_ATLAS_ATTACKER_MODEL
+  strategy: indicators       # auto | judge | indicators
+  refusal: true              # cheap substring refusal short-circuit; default true
+  judge_model: gpt-4o-mini   # override ATOMIC_ATLAS_LLM_MODEL for the judge only
 ```
 
-Use `strategy: indicators` when the indicators *are* deterministic ground truth (e.g., an exact `sk-` credential leak) and you want to skip the judge cost. Use `strategy: substring` only as a last-resort fallback for atomics that haven't been backfilled yet.
+Use `strategy: indicators` when the indicators *are* deterministic ground truth (e.g., an exact `sk-` credential leak) and you want to skip the judge cost.
 
-### Global env override
+### Global offline override
 
-```bash
-ATOMIC_ATLAS_SCORING=indicators   # force IndicatorScorer for the whole run
-ATOMIC_ATLAS_NO_ATTACKER_LLM=1    # disable both judge and attacker LLM
-```
-
-The `NO_ATTACKER_LLM=1` flag is for offline runs — it forces deterministic scoring and skips the attacker LLM that `RedTeamingAttack` would otherwise drive.
+Set `ATOMIC_ATLAS_OFFLINE=1` in `.env` to disable every LLM call site (judge + attacker LLM). Forces deterministic indicator scoring and falls back to `PromptSendingAttack`. Useful for air-gapped runs or when you want the runner to execute mechanically without spending on LLM calls.
 
 ## The Evidence model
 
@@ -219,4 +214,4 @@ Substring scoring would have flagged Run 2 either way (the indicators match) but
 - **Judge cost** — the judge makes one LLM call per run. With 3 runs × 5 atomics that's 15 calls; with `RedTeamingOrchestrator` add the attacker calls on top. Use `scoring.judge_model: gpt-4o-mini` for cheap atomics.
 - **Variance** — two runs of the same atomic against the same response can produce different judge verdicts. This is well-known LLM-judge behavior. Self-consistency (N=3 majority vote) lands in v0.3 if it becomes a problem.
 - **Regex `.` matches newlines?** — by default no. Patterns are compiled with `re.IGNORECASE | re.MULTILINE` but not `re.DOTALL`. Use `(?s)` inline if you need cross-line matching.
-- **Refusal short-circuit didn't fire** — the cheap detector matches a curated list of phrases (`"i can't help"`, `"as an ai"`, …). Custom-styled refusals like `"[BLOCKED] Security Alert"` won't match; the judge then catches them. Either accept the cost, or use `scoring.refusal_check: llm` (`SelfAskRefusalScorer`).
+- **Refusal short-circuit didn't fire** — the cheap detector matches a curated list of phrases (`"i can't help"`, `"as an ai"`, …). Custom-styled refusals like `"[BLOCKED] Security Alert"` won't match; the judge then catches them. The `cheap` substring path is the only mode shipped today; an LLM-driven refusal scorer is a v0.3 candidate.

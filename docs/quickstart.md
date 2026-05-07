@@ -101,14 +101,15 @@ The recon module probes well-known endpoints (chat completions, OpenAPI / tool s
 
 ## Step 4 — set up the attacker LLM
 
-PyRIT's `RedTeamingOrchestrator` uses a separate "attacker" LLM to generate and mutate injected payloads. Configure it via env:
+PyRIT's `RedTeamingAttack` uses a separate "attacker" LLM to generate and mutate injected payloads. The same model serves the LLM judge tier. Configure once in repo-root `.env` (auto-loaded; see [docs/install.md](install.md#llm-providers--openai-openrouter-ollama-local-llms) for the full provider matrix):
 
-```bash
-export OPENAI_API_KEY=sk-...
-export ATOMIC_ATLAS_ATTACKER_MODEL=gpt-4o            # default
+```dotenv
+# .env
+OPENAI_API_KEY=sk-...
+ATOMIC_ATLAS_LLM_MODEL=gpt-4o            # default; gpt-4o-mini for cheaper
 ```
 
-To use a non-OpenAI provider (Anthropic, Bedrock, Ollama, …), point `OPENAI_API_BASE` at a [LiteLLM](https://github.com/BerriAI/litellm) proxy. PyRIT 0.13 does not ship a first-class Anthropic chat target.
+For non-OpenAI providers (OpenRouter, Ollama, vLLM, LiteLLM), set `OPENAI_API_BASE` in `.env` too — atomic-atlas detects external providers and trusts the operator's setup. Full setup snippets in [docs/install.md](install.md).
 
 ## Step 5 — run the flagship atomic
 

@@ -111,10 +111,9 @@ Environment variables:
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `OPENAI_API_KEY` | Required for the LLM call. | — |
-| `OPENAI_API_BASE` | Override the OpenAI endpoint (LiteLLM proxy, vLLM, etc.). | `https://api.openai.com/v1` |
-| `ATOMIC_ATLAS_ADAPTER_MODEL` | Generator model. | `gpt-4o` |
-| `ATOMIC_ATLAS_ATTACKER_MODEL` | Fallback for the generator model. | `gpt-4o` |
+| `OPENAI_API_KEY` | Required for the LLM call (skip-able when using a non-auth local LLM via custom `OPENAI_API_BASE`). | — |
+| `OPENAI_API_BASE` | LLM endpoint. Default OpenAI; set to OpenRouter / Ollama / vLLM / LiteLLM as needed. | `https://api.openai.com/v1` |
+| `ATOMIC_ATLAS_LLM_MODEL` | Generator model — same model used by the attacker LLM and judge tier. | `gpt-4o` |
 
 Pin all of these in repo-root `.env` (auto-loaded; `.env` wins over the shell). No CLI flags for model selection — keeping the CLI surface tight. See [`docs/install.md`](install.md#llm-providers--openai-openrouter-ollama-local-llms) for OpenRouter / Ollama / vLLM setup.
 

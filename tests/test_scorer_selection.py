@@ -17,6 +17,17 @@ from atomic_atlas.runner import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _reset_openai_endpoint(monkeypatch):
+    """Most tests in this file assume the default OpenAI endpoint when
+    asserting API-key presence/absence. The repo-root .env may have
+    OPENAI_API_BASE pointed elsewhere (OpenRouter, Ollama), which would
+    trip the external-provider trust path in has_api_key(). Reset to the
+    default before each test; tests that want external-provider behavior
+    override locally."""
+    monkeypatch.setenv("OPENAI_API_BASE", "https://api.openai.com/v1")
+
+
 def _atomic(
     *,
     technique="AML.T0083",
