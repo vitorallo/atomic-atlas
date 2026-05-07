@@ -111,6 +111,7 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 |---|---|
 | [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review; `adapt` → `exec --payload-file` chain |
 | [docs/use-cases.md](docs/use-cases.md) | Three end-to-end walkthroughs: smoke a single technique, chained kill chain with `adapt`, full engagement runbook |
+| [docs/benchmarks.md](docs/benchmarks.md) | 12 live runs across 6 DVAA bots — same response, three judge verdicts; runtime as fitness signal; reproducible commands |
 | [docs/cli-reference.md](docs/cli-reference.md) | Per-subcommand reference: every flag with copy-pasteable examples |
 | [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators / substring), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
 | [docs/adapt.md](docs/adapt.md) | Payload adapter: bundle format, prompt structure, observed-evidence selection rules, audit trail |

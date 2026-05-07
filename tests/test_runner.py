@@ -137,3 +137,37 @@ async def test_run_atomic_requires_authorized():
         # run_atomic does not silently execute.
         with pytest.raises((PermissionError, PyRITNotInstalledError)):
             await run_atomic(atomic, fake_target, authorized=False)
+
+
+def test_load_profile_resolves_env_substitutions(tmp_path, monkeypatch):
+    """load_profile substitutes ${VAR} from the env at load time, recursively
+    through dicts and lists. Missing vars stay as literal ${VAR} so the
+    operator sees which credential failed at HTTP time."""
+    from atomic_atlas.runner import load_profile
+
+    monkeypatch.setenv("ATOMIC_ATLAS_TEST_KEY", "sk-resolved-12345")
+    monkeypatch.delenv("ATOMIC_ATLAS_NEVER_SET", raising=False)
+
+    profile_file = tmp_path / "profile.yaml"
+    profile_file.write_text(
+        "base_url: http://localhost:7003/v1\n"
+        "target_context:\n"
+        "  agent_role: tester\n"
+        "  expected_tools:\n"
+        "    - tool_with_${ATOMIC_ATLAS_TEST_KEY}\n"
+        "adapters:\n"
+        "  direct_chat:\n"
+        "    api_key: ${ATOMIC_ATLAS_TEST_KEY}\n"
+        "    fallback_token: ${ATOMIC_ATLAS_NEVER_SET}\n"
+    )
+    profile = load_profile(profile_file)
+
+    assert profile["adapters"]["direct_chat"]["api_key"] == "sk-resolved-12345"
+    assert (
+        profile["adapters"]["direct_chat"]["fallback_token"]
+        == "${ATOMIC_ATLAS_NEVER_SET}"  # stays literal — caller sees what's missing
+    )
+    # Nested list values resolved too
+    assert profile["target_context"]["expected_tools"] == ["tool_with_sk-resolved-12345"]
+    # Non-string scalars untouched
+    assert profile["base_url"] == "http://localhost:7003/v1"

@@ -79,8 +79,37 @@ class RunResult:
         return self.successes / self.total_runs
 
 
+_ENV_REF_RE = re.compile(r"\$\{(\w+)\}")
+
+
+def _resolve_env_in_profile(value: Any) -> Any:
+    """Recursively replace ``${ENV_VAR}`` references with the current
+    environment value. Strings without references pass through untouched;
+    references whose env var is unset stay as the literal ``${VAR}`` so
+    callers see exactly which credential is missing at HTTP time (matches
+    the contract in docs/targets.md).
+    """
+    if isinstance(value, str):
+        return _ENV_REF_RE.sub(
+            lambda m: os.environ.get(m.group(1), m.group(0)), value
+        )
+    if isinstance(value, dict):
+        return {k: _resolve_env_in_profile(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_env_in_profile(v) for v in value]
+    return value
+
+
 def load_profile(profile_path: Path | str) -> dict[str, Any]:
-    return yaml.safe_load(Path(profile_path).read_text(encoding="utf-8"))
+    """Load a target profile YAML and resolve ``${ENV_VAR}`` references.
+
+    Env-var substitution happens once here so every downstream consumer
+    (target adapters, MCP server, ad-hoc tooling) receives resolved
+    values. Per-adapter ``_resolve_env`` calls remain as defensive
+    backstops for callers that construct configs by hand.
+    """
+    raw = yaml.safe_load(Path(profile_path).read_text(encoding="utf-8"))
+    return _resolve_env_in_profile(raw) if raw is not None else raw
 
 
 def _ensure_pyrit_initialized() -> None:
