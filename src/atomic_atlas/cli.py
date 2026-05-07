@@ -457,6 +457,17 @@ def _resolve_atomic_path(atomic_path: str) -> Path:
         candidate = candidate.with_suffix(".md")
     if candidate.exists():
         return candidate
+    # Unclassified atomics live under atomics/unclassified/<slug>/<vector>.md
+    # but their atlas_technique reads "UNCLASSIFIED.<slug>". Translate the
+    # technique-id form so operators can use the same shorthand they see in
+    # `atomic-atlas list` output.
+    if atomic_path.startswith("UNCLASSIFIED."):
+        rest = atomic_path[len("UNCLASSIFIED."):]
+        candidate = ATOMICS_DIR / "unclassified" / rest
+        if not candidate.suffix:
+            candidate = candidate.with_suffix(".md")
+        if candidate.exists():
+            return candidate
     raise click.BadParameter(f"Atomic not found: {atomic_path}")
 
 

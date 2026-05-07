@@ -199,3 +199,16 @@ def test_has_api_key_external_provider_skips_placeholder_check(monkeypatch):
     # Offline overrides everything
     monkeypatch.setenv("ATOMIC_ATLAS_OFFLINE", "1")
     assert has_api_key() is False
+
+
+def test_resolve_atomic_path_handles_unclassified():
+    """UNCLASSIFIED.<slug>/<vector> shorthand resolves to
+    atomics/unclassified/<slug>/<vector>.md, matching the form
+    `atomic-atlas list` prints."""
+    from atomic_atlas.cli import _resolve_atomic_path, ATOMICS_DIR
+
+    p = _resolve_atomic_path("UNCLASSIFIED.self-replicating-memory/direct_chat")
+    assert p.exists()
+    assert p.name == "direct_chat.md"
+    assert "unclassified" in p.parts
+    assert p.is_relative_to(ATOMICS_DIR)
