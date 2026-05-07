@@ -214,6 +214,8 @@ CLI `exec` without `target_context` produces less domain-aware variants — fine
 
 For high-stakes engagements, the **agent runner skill / MCP server** is the canonical workflow because it can adapt both delivery (vector) and payload (content) using its own reasoning, beyond what the attacker LLM does.
 
+For the in-between case — where you want LLM-driven payload generation but not the full agent — `atomic-atlas adapt` produces a target-tuned initial payload as a reviewable markdown bundle, and `atomic-atlas exec --payload-file <bundle>` cleanly hands it off to the runner. The generator consumes the atomic's intent, the profile's `target_context`, optional recon JSON, and optional prior-run `Evidence` (so a T0084 system-prompt leak can shape the next T0083 cred-extraction payload). See [`docs/adapt.md`](docs/adapt.md).
+
 DVAA-specific payload variants (`payloads/dvaa_*.json`) are reference shapes, not portable templates — they hardcode DVAA endpoints by design (`/etc/passwd`, AWS metadata IPs, etc.). When writing a new atomic, prefer shape-describing seeds (variant families, attack axes) over concrete strings.
 
 ## Scoring tiers + evidence

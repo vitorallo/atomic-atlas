@@ -178,7 +178,44 @@ atomic-atlas report --input results.json --format navigator --output dvaa.layer.
 
 Open [the ATLAS Navigator](https://mitre-atlas.github.io/atlas-navigator/) → "Open Existing Layer" → "Upload from local" → pick `dvaa.layer.json`. You will see your tested techniques color-coded by success rate.
 
-## Step 7 (optional) — chain atomics
+## Step 7a (optional) — generate a target-tuned payload with `adapt`
+
+For atomics where the static seed payload is generic, use the LLM-driven `adapt` step to produce a payload tuned to the specific target. The generated bundle is a reviewable markdown file; `exec --payload-file` then runs it.
+
+```bash
+# 1. Generate a target-tuned payload bundle.
+atomic-atlas adapt AML.T0083/direct_chat \
+  --profile targets/dvaa_legacybot.yaml \
+  --output adapted.md
+
+# 2. (Optional) review/edit the bundle before sending.
+$EDITOR adapted.md
+
+# 3. Run the adapted payload through exec.
+atomic-atlas exec AML.T0083/direct_chat \
+  --target http://localhost:7003/v1 \
+  --profile targets/dvaa_legacybot.yaml \
+  --payload-file adapted.md \
+  --runs 3 --authorized
+```
+
+The real win is feeding `adapt` evidence harvested from a *prior* run. After a T0084 configuration-disclosure run leaks the agent's role + tools, point `adapt` at those results so the generated T0083 payload references the harvested context:
+
+```bash
+atomic-atlas exec AML.T0084/direct_chat \
+  --target http://localhost:7003/v1 \
+  --profile targets/dvaa_legacybot.yaml \
+  --output t0084.json --runs 3 --authorized
+
+atomic-atlas adapt AML.T0083/direct_chat \
+  --profile targets/dvaa_legacybot.yaml \
+  --observed t0084.json \
+  --output adapted-t0083.md
+```
+
+The bundle's frontmatter records `generator_model` + `generator_prompt_hash` + `generated_at` for audit. Full guide: [`docs/adapt.md`](adapt.md). End-to-end walkthroughs: [`docs/use-cases.md`](use-cases.md).
+
+## Step 7b (optional) — chain atomics
 
 Run the next technique in the kill chain:
 
@@ -224,6 +261,10 @@ For domain-aware payload mutation (when `RedTeamingAttack`-tagged atomics are ru
 
 ## Where to go next
 
+- **Three end-to-end walkthroughs** — [`docs/use-cases.md`](use-cases.md): smoke a single technique, run a chained kill chain with `adapt`, run a full engagement runbook.
+- **CLI flag reference** — every subcommand and flag with copy-pasteable examples: [`docs/cli-reference.md`](cli-reference.md).
+- **Scoring + Evidence** — when to use `judge_guidance` / `judge_examples` / `extractors`, the Evidence schema: [`docs/scoring.md`](scoring.md).
+- **Payload adapter** — bundle format, prompt structure, observed-evidence selection rules: [`docs/adapt.md`](adapt.md).
 - **Authoring atomics** — copy `atomics/_TEMPLATE/vector_template.md`, fill in frontmatter + body sections, run `atomic-atlas validate`. See [SPEC.md](../SPEC.md).
 - **Testing a non-DVAA target** — see [docs/targets.md](targets.md) for profile authoring and the auth-scheme reference.
 - **Hard-coded adapter doesn't fit your target** — use the [agent runner](agent-runner.md). The Claude Code skill (`/atomic-atlas`) and the MCP server (`atomic-atlas-mcp`) reason about novel targets and adapt delivery on the fly.
