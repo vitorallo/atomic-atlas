@@ -48,6 +48,54 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 ---
 
+## Current status
+
+**128 tests passing, 1 skipped.** v0.1 is keynote-ready; v0.2 is in flight.
+
+### Across all OpenSpec changes
+
+| Spec | Status | Notes |
+|---|---|---|
+| **atomic-format** | ✅ Shipped | Atomic markdown schema + parser. 27 atomics, 19 ATLAS techniques. |
+| **agentic-targets** | ✅ Mostly shipped | 6 adapters live (`direct_chat`, `rag_corpus`, `mcp_server`, `tool_response`, `document_upload`, `webhook`). Missing: A2A, web_fetch, email, computer_use, model_api. |
+| **agent-runner** | ✅ Shipped | Claude Code skill + MCP server (`atomic-atlas-mcp`). |
+| **cli-and-reporting** | ✅ Shipped | `recon`, `list`, `validate`, `exec`, `report`, `runbook`, `adapt`. Reporters: navigator, coverage, markdown. |
+| **runbooks** | ✅ Shipped | DAG executor + 22 DVAA runbooks. Missing: kill-chain runbooks, engagement templates. |
+| **payload-adaptation** | ✅ Shipped | `target_context` profile field, `RedTeamingAttack` integration, `--hitl`. |
+| **scoring-tiers** | ✅ Shipped (v0.2) | Three-tier scorer (judge → indicators → substring), first-class `Evidence`, regex extractors, refusal short-circuit. Live-verified end-to-end against DVAA. |
+| **payload-adapter** | ✅ Shipped (v0.2) | `atomic-atlas adapt` CLI + `exec --payload-file` handoff. Bundle round-trip, observed-evidence selection. Live-verified end-to-end. |
+| **atlas-agentic-coverage** | ⏳ Partial | Coverage tracking; updated as atomics are added. |
+| **vulnerable-agent (Lobster)** | ❌ Not started | Custom vulnerable LangGraph agent. The DVAA phrase-matcher limit makes Lobster more valuable than originally scoped. |
+
+### PRD milestones
+
+- **v0.1 — Keynote-ready**: 14/16 ✅. Open: git tag `v0.1.0`, live keynote dry-run.
+- **v0.2 — A2A, scoring, kill chains**: 2/9 done (scoring + adapter). Open: A2A target, web/email/computer-use targets, kill-chain runbooks, engagement runbooks, atomic catalog expansion (17 new ATLAS techniques), Lobster, cost telemetry, runbook reporters.
+- **v0.3 — Community pipeline**: not started. CI, PyPI, sibling vulnerable agents.
+
+### What's next — ranked by leverage
+
+**Tier 1 — high leverage, demonstrably-relevant to the keynote:**
+
+1. **Lobster (vulnerable-agent)** — real LLM target. DVAA is a phrase-matcher, not an LLM, so it can't truly evaluate adapter-generated payloads. A real LangGraph agent with ATLAS-tagged failures would prove the architecture against actual LLM behavior. ~1-2 days.
+2. **Canonical kill-chain runbooks** under `runbooks/kill-chains/` — `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`. Strongest demo material for the keynote. ~half-day each.
+3. **Live keynote dry-run** — rehearse the full deck against DVAA + Lobster end-to-end. The architecture is verified piece by piece but the talk pacing isn't.
+
+**Tier 2 — fills demonstrable gaps:**
+
+4. **A2ATarget** — unblocks `RB-DVAA-L4-02` (3 a2a_message atomics already shipped, no executor). Agent-to-agent attack story is one of the Five Dimensions. ~half-day.
+5. **Composite scorer path** — `scoring.strategy: composite` wrapping `TrueFalseCompositeScorer`. Currently deferred in scoring-tiers/tasks.md. ~half-day.
+6. **Backfill remaining 21 atomics with `success_indicators` / `judge_guidance`** — judge tier carries the load alone for most atomics today. ~1 day.
+
+**Tier 3 — debt + polish:**
+
+7. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical).
+8. Deprecation warnings + v0.3 removal plan for legacy `SubStringScorer`.
+9. `atomic-atlas init-profile` — CLI generator from recon output (operator UX).
+10. Cost estimation before exec; `last_verified_date` field + model-drift CI.
+
+---
+
 ## Documentation
 
 | Doc | What it covers |
