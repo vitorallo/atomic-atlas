@@ -180,40 +180,9 @@ Open [the ATLAS Navigator](https://mitre-atlas.github.io/atlas-navigator/) → "
 
 ## Step 7a (optional) — generate a target-tuned payload with `adapt`
 
-For atomics where the static seed payload is generic, use the LLM-driven `adapt` step to produce a payload tuned to the specific target. The generated bundle is a reviewable markdown file; `exec --payload-file` then runs it.
+For atomics where the static seed is generic, `atomic-atlas adapt` generates a target-tuned payload bundle (rationale + payload + suggested observations) using the atomic's intent + the profile's `target_context` + optional prior-run evidence. `atomic-atlas exec --payload-file <bundle>` runs it.
 
-```bash
-# 1. Generate a target-tuned payload bundle.
-atomic-atlas adapt AML.T0083/direct_chat \
-  --profile targets/dvaa_legacybot.yaml \
-  --output adapted.md
-
-# 2. (Optional) review/edit the bundle before sending.
-$EDITOR adapted.md
-
-# 3. Run the adapted payload through exec.
-atomic-atlas exec AML.T0083/direct_chat \
-  --target http://localhost:7003/v1 \
-  --profile targets/dvaa_legacybot.yaml \
-  --payload-file adapted.md \
-  --runs 3 --authorized
-```
-
-The real win is feeding `adapt` evidence harvested from a *prior* run. After a T0084 configuration-disclosure run leaks the agent's role + tools, point `adapt` at those results so the generated T0083 payload references the harvested context:
-
-```bash
-atomic-atlas exec AML.T0084/direct_chat \
-  --target http://localhost:7003/v1 \
-  --profile targets/dvaa_legacybot.yaml \
-  --output t0084.json --runs 3 --authorized
-
-atomic-atlas adapt AML.T0083/direct_chat \
-  --profile targets/dvaa_legacybot.yaml \
-  --observed t0084.json \
-  --output adapted-t0083.md
-```
-
-The bundle's frontmatter records `generator_model` + `generator_prompt_hash` + `generated_at` for audit. Full guide: [`docs/adapt.md`](adapt.md). End-to-end walkthroughs: [`docs/use-cases.md`](use-cases.md).
+The chained workflow (T0084 harvest → adapt T0083 with `--observed` → exec) is walked end-to-end as **UC2 in [`docs/use-cases.md`](use-cases.md)**. Authoring details + bundle format: [`docs/adapt.md`](adapt.md).
 
 ## Step 7b (optional) — chain atomics
 

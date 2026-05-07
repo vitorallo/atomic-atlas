@@ -199,7 +199,8 @@ Useful environment variables:
 | `ATOMIC_ATLAS_ATTACKER_MODEL` | Attacker-LLM model (default `gpt-4o`). |
 | `ATOMIC_ATLAS_NO_ATTACKER_LLM=1` | Disable both attacker LLM and judge — forces deterministic scoring. |
 | `ATOMIC_ATLAS_SCORING` | Force scorer tier: `judge` / `indicators` / `substring`. |
-| `ATOMIC_ATLAS_EVIDENCE_SNIPPET_MAX` | Override `evidence.matched_against` truncation (default 1000, floor 64). |
+
+A few additional vars exist for tests / development (`ATOMIC_ATLAS_ATOMICS_DIR`, `ATOMIC_ATLAS_SKIP_DOTENV`, `ATOMIC_ATLAS_PYRIT_DB`, `ATOMIC_ATLAS_EVIDENCE_SNIPPET_MAX`); they're stable but not part of the operator surface.
 
 See [`docs/scoring.md`](scoring.md) for the scorer-tier details.
 

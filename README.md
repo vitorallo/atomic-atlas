@@ -52,6 +52,8 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 **128 tests passing, 1 skipped.** v0.1 is keynote-ready; v0.2 is in flight.
 
+> **About DVAA in this repo.** Most examples target [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), a vulnerability simulator with scripted phrase-matched responses. It's the right harness to verify the runner mechanically, but it does not behave like a real LLM agent — single-shot LLM-generated payloads may not hit DVAA's narrow trigger set. For LLM-behavior validation, use Lobster (planned for v0.2; see [openspec/changes/vulnerable-agent](openspec/changes/vulnerable-agent)) or a real target you control.
+
 ### Across all OpenSpec changes
 
 | Spec | Status | Notes |
