@@ -86,15 +86,22 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 **Tier 2 — fills demonstrable gaps:**
 
 4. **A2ATarget** — unblocks `RB-DVAA-L4-02` (3 a2a_message atomics already shipped, no executor). Agent-to-agent attack story is one of the Five Dimensions. ~half-day.
-5. **Composite scorer path** — `scoring.strategy: composite` wrapping `TrueFalseCompositeScorer`. Currently deferred in scoring-tiers/tasks.md. ~half-day.
-6. **Backfill remaining 21 atomics with `success_indicators` / `judge_guidance`** — judge tier carries the load alone for most atomics today. ~1 day.
+5. **Backfill remaining 21 atomics with `success_indicators` / `judge_guidance`** — judge tier carries the load alone for most atomics today. ~1 day.
 
 **Tier 3 — debt + polish:**
 
-7. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical).
-8. Deprecation warnings + v0.3 removal plan for legacy `SubStringScorer`.
-9. `atomic-atlas init-profile` — CLI generator from recon output (operator UX).
-10. Cost estimation before exec; `last_verified_date` field + model-drift CI.
+6. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical).
+7. `atomic-atlas init-profile` — CLI generator from recon output (operator UX).
+8. Cost estimation before exec; `last_verified_date` field + model-drift CI.
+
+**v0.2 simplification pass shipped this session** (commits `ac495c9` → `6d81421`):
+- Archived 6 shipped OpenSpec changes; active spec dir down from 10 to 4.
+- Single LLM factory (`src/atomic_atlas/llm.py`) replaces 3 duplicated chat-target setups.
+- Frontmatter shrunk from 15 → 13 fields. Dropped `pyrit_orchestrator` + `pyrit_scorer` legacy class names; replaced with one `multi_turn` boolean.
+- Dropped the unimplemented `composite` scorer strategy and the legacy `SubStringScorer` tier (now `judge` → `indicators`, two tiers).
+- Refusal short-circuit collapsed from a 3-mode enum to a `scoring.refusal: bool`.
+- Env vars consolidated: `ATOMIC_ATLAS_NO_ATTACKER_LLM` + `_SCORING` → `ATOMIC_ATLAS_OFFLINE`; `ATTACKER_MODEL` + `ADAPTER_MODEL` → `LLM_MODEL`.
+- CLI down from 11 commands to 9 (`runbook show` removed; `runbook validate` merged into top-level `validate`, which now handles atomics + runbooks in one pass).
 
 ---
 
