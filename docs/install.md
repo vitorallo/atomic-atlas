@@ -123,7 +123,8 @@ Then run as usual. No CLI flag changes needed — the `.env` is the single sourc
 |---|---|---|
 | `gpt-4o` (OpenAI) | ~$0.30-0.80 | Strongest honest verdicts; default if you don't pin anything else |
 | `gpt-4o-mini` (OpenAI) | ~$0.02-0.05 | Slight judge-quality hit; usually fine |
-| **`deepseek/deepseek-v4-flash` (OpenRouter)** | **~$0.01-0.03** | **Recommended cheap default.** Output-cheap, strong on strict-JSON judge prompts and multi-turn `RedTeamingAttack`. Verified end-to-end against DVAA. |
+| **`deepseek/deepseek-v3.2` (OpenRouter)** | **~$0.01-0.03** | **Recommended cheap default.** Strong on strict-JSON judge prompts and multi-turn `RedTeamingAttack`. Verified end-to-end against DVAA (2/2 success in 150s). |
+| `deepseek/deepseek-v4-flash` (OpenRouter) | ~$0.01-0.03 | Slightly cheaper than v3.2, but OpenRouter sometimes routes it through the `AtlasCloud` backend which Cloudflare-blocks PyRIT's adversarial prompts (HTTP 403). v3.2 routes more reliably; prefer it. |
 | `google/gemma-3-12b-it` (OpenRouter) | ~$0.005-0.02 | Even cheaper; older model, judge quality acceptable for smoke testing |
 | OpenRouter `:free` model | $0 | Rate-limited (429s) and provider-side slowness; multi-turn paths can stall — use for single-turn smoke only |
 | Ollama local | $0 | Bound by your hardware |
