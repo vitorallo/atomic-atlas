@@ -1,0 +1,13 @@
+
+Recon: http://localhost:7003/v1
+
+Entry vectors:
+  ✓ direct_chat
+  ? mcp_server  (cannot determine externally)
+
+Guardrails:
+  input_filter_detected: False
+
+Suggested ATLAS techniques in scope:
+  AML.T0051.000, AML.T0065
+

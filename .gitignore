@@ -57,6 +57,11 @@ layer.json
 atomic-atlas-engagement/
 *.engagement/
 
+# Curated showcase assessment — committed on purpose; un-ignore it so the
+# global artifact patterns above (layer.json, *.results.json, …) don't eat it.
+!sample_assessment1/
+!sample_assessment1/**
+
 # PyRIT memory (default DB path written by SQLiteMemory when not :memory:)
 pyrit.db
 *.db
