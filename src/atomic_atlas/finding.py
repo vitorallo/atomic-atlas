@@ -16,7 +16,7 @@ No new LLM call. Everything derived deterministically from data the
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Optional
 
 
@@ -51,26 +51,9 @@ class Finding:
     last_run_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "atlas_technique": self.atlas_technique,
-            "interaction_vector": self.interaction_vector,
-            "target_id": self.target_id,
-            "verdict": self.verdict,
-            "severity": self.severity,
-            "success_rate": self.success_rate,
-            "runs_succeeded": self.runs_succeeded,
-            "runs_total": self.runs_total,
-            "runs_errored": self.runs_errored,
-            "summary": self.summary,
-            "evidence_excerpts": list(self.evidence_excerpts),
-            "extracted_artifacts": {k: list(v) for k, v in self.extracted_artifacts.items()},
-            "sample_attack_inputs": list(self.sample_attack_inputs),
-            "recommendations": list(self.recommendations),
-            "judge_model": self.judge_model,
-            "duration_seconds": self.duration_seconds,
-            "first_run_at": self.first_run_at,
-            "last_run_at": self.last_run_at,
-        }
+        """JSON-serializable dict; lists / dicts are deep-copied so callers
+        can mutate the result without touching this instance."""
+        return asdict(self)
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +142,45 @@ def parse_recommendations(atlas_mitigations_body: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+@dataclass
+class _EvidenceAcc:
+    """Mutable accumulators threaded through ``aggregate``'s run-detail walk.
+
+    Folding one evidence dict at a time into this object keeps
+    ``aggregate`` flat — the per-detail branching lives in ``absorb``.
+    """
+
+    evidence_excerpts: list[str]
+    extracted: dict[str, list[str]]
+    extracted_seen: dict[str, set[str]]
+    sample_inputs: list[str]
+    judge_models: set[str]
+    best_judge_reasoning: tuple[int, str]
+
+    def absorb(self, ev: dict) -> None:
+        jm = ev.get("judge_model")
+        if jm:
+            self.judge_models.add(jm)
+        if not ev.get("verdict"):
+            return
+        ai = (ev.get("attack_input") or "").strip()
+        if ai and ai not in self.sample_inputs:
+            self.sample_inputs.append(ai)
+        ma = (ev.get("matched_against") or "").strip()
+        if ma and len(self.evidence_excerpts) < 3 and ma not in self.evidence_excerpts:
+            self.evidence_excerpts.append(ma)
+        jr = (ev.get("judge_reasoning") or "").strip()
+        if jr and len(jr) > self.best_judge_reasoning[0]:
+            self.best_judge_reasoning = (len(jr), jr)
+        for name, hits in (ev.get("extracted") or {}).items():
+            bucket = self.extracted.setdefault(name, [])
+            seen = self.extracted_seen.setdefault(name, set())
+            for h in hits:
+                if h not in seen:
+                    seen.add(h)
+                    bucket.append(h)
+
+
 def aggregate(
     entries: list[dict],
     *,
@@ -195,30 +217,21 @@ def aggregate(
     judge_models: set[str] = set()
     best_judge_reasoning: tuple[int, str] = (0, "")  # (length, text)
 
+    extracted_seen: dict[str, set[str]] = {}
+    acc = _EvidenceAcc(
+        evidence_excerpts=evidence_excerpts,
+        extracted=extracted,
+        extracted_seen=extracted_seen,
+        sample_inputs=sample_inputs,
+        judge_models=judge_models,
+        best_judge_reasoning=best_judge_reasoning,
+    )
     for entry in entries:
         for d in entry.get("run_details", []):
             ev = d.get("evidence") or {}
-            if not isinstance(ev, dict):
-                continue
-            verdict_true = bool(ev.get("verdict"))
-            jm = ev.get("judge_model")
-            if jm:
-                judge_models.add(jm)
-            if verdict_true:
-                ai = (ev.get("attack_input") or "").strip()
-                if ai and ai not in sample_inputs:
-                    sample_inputs.append(ai)
-                ma = (ev.get("matched_against") or "").strip()
-                if ma and len(evidence_excerpts) < 3 and ma not in evidence_excerpts:
-                    evidence_excerpts.append(ma)
-                jr = (ev.get("judge_reasoning") or "").strip()
-                if jr and len(jr) > best_judge_reasoning[0]:
-                    best_judge_reasoning = (len(jr), jr)
-                for name, hits in (ev.get("extracted") or {}).items():
-                    bucket = extracted.setdefault(name, [])
-                    for h in hits:
-                        if h not in bucket:
-                            bucket.append(h)
+            if isinstance(ev, dict):
+                acc.absorb(ev)
+    best_judge_reasoning = acc.best_judge_reasoning
 
     has_extracted = bool(extracted)
     verdict = derive_verdict(

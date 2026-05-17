@@ -93,6 +93,12 @@ _VERDICT_LABEL = {
 }
 
 
+def _preview(text: str, limit: int) -> str:
+    """Single-line preview: collapse newlines, trim, clip with ``…``."""
+    s = text.replace("\n", " ").strip()
+    return s if len(s) <= limit else s[:limit] + "…"
+
+
 def render_findings(findings: list[Finding]) -> str:
     """Return the full markdown document. No I/O."""
     if not findings:
@@ -160,19 +166,13 @@ def _render_finding(f: Finding) -> list[str]:
     if f.sample_attack_inputs:
         out.append("**Sample attack inputs that landed:**")
         for s in f.sample_attack_inputs[:3]:
-            preview = s.replace("\n", " ").strip()
-            if len(preview) > 200:
-                preview = preview[:200] + "…"
-            out.append(f"- {preview}")
+            out.append(f"- {_preview(s, 200)}")
         out.append("")
 
     if f.evidence_excerpts:
         out.append("**Representative response excerpt:**")
         for excerpt in f.evidence_excerpts[:1]:
-            block = excerpt.replace("\n", " ").strip()
-            if len(block) > 320:
-                block = block[:320] + "…"
-            out.append(f"> {block}")
+            out.append(f"> {_preview(excerpt, 320)}")
         out.append("")
 
     if f.recommendations:

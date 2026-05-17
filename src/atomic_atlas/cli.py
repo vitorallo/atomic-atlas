@@ -181,11 +181,7 @@ def exec_(atomic_path: str, target: str, profile: str | None, runs: int | None,
         f"({result.success_rate:.0%}) in {result.duration_seconds:.1f}s"
     )
 
-    target_id = (
-        (profile_data.get("target_context") or {}).get("target_id")
-        or (Path(profile).stem if profile else "")
-        or target
-    )
+    target_id = _resolve_target_id(profile, profile_data, target)
 
     # Always append to the engagement dir (default ./atomic-atlas-engagement/).
     from .engagement import Engagement
@@ -496,10 +492,8 @@ def _collect_adapt_inputs(
         click.echo(f"ERROR: cannot load profile {profile!r}: {exc}", err=True)
         sys.exit(2)
 
-    resolved_target_id = (
-        target_id
-        or (profile_data.get("target_context") or {}).get("target_id")
-        or Path(profile).stem
+    resolved_target_id = _resolve_target_id(
+        profile, profile_data, target="", override=target_id
     )
 
     recon = _load_json_or_exit(recon_file, label="--recon") if recon_file else None
@@ -577,6 +571,19 @@ def _load_payload_from_file(path: Path) -> tuple[str, str]:
             pass
 
     return text.strip(), "raw"
+
+
+def _resolve_target_id(profile, profile_data, target, override=None) -> str:
+    """Resolve a target_id with the documented precedence: explicit
+    override > profile's ``target_context.target_id`` > profile filename
+    stem > the target URL."""
+    return (
+        override
+        or (profile_data.get("target_context") or {}).get("target_id")
+        or (Path(profile).stem if profile else "")
+        or target
+        or ""
+    )
 
 
 def _append_result(result, output_path: Path) -> None:
@@ -724,11 +731,7 @@ def runbook_run(runbook_id_or_path: str, target: str, profile: str | None,
             f"in {sr.duration_seconds:.1f}s"
         )
 
-    target_id = (
-        (profile_data.get("target_context") or {}).get("target_id")
-        or (Path(profile).stem if profile else "")
-        or target
-    )
+    target_id = _resolve_target_id(profile, profile_data, target)
 
     from .engagement import Engagement
     engagement = Engagement.from_env_or_default(engagement_dir)
