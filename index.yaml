@@ -1,11 +1,23 @@
 version: 1
-generated: '2026-05-06'
+generated: '2026-05-17'
 atomics:
+- technique: AML.T0011.002
+  vector: mcp_server
+  path: atomics/AML.T0011.002/mcp_server.md
+  guid: b74c6e62-cea9-4fa7-844c-16a45b28106e
+  display_name: Poisoned AI Agent Tool
+  runs: 5
 - technique: AML.T0051.000
   vector: direct_chat
   path: atomics/AML.T0051.000/direct_chat.md
   guid: 1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d
   display_name: Direct Prompt Injection
+  runs: 5
+- technique: AML.T0051.001
+  vector: a2a_message
+  path: atomics/AML.T0051.001/a2a_message.md
+  guid: 204ba8f5-6fa6-4f9d-8a0f-ab656f817114
+  display_name: Indirect Prompt Injection (via Agent-to-Agent Message)
   runs: 5
 - technique: AML.T0051.001
   vector: document_upload
@@ -37,11 +49,47 @@ atomics:
   guid: 4b5c6d7e-8f0a-4b1c-9d2e-3f4a5b6c7d8e
   display_name: AI Agent Tool Invocation
   runs: 5
+- technique: AML.T0054
+  vector: direct_chat
+  path: atomics/AML.T0054/direct_chat.md
+  guid: 2b8244aa-439a-48e3-9ddd-eb28983543c0
+  display_name: LLM Jailbreak
+  runs: 5
 - technique: AML.T0065
   vector: direct_chat
   path: atomics/AML.T0065/direct_chat.md
   guid: 0b1c2d3e-4f5a-4b6c-b37d-8e9f0a1b2c3d
   display_name: LLM Prompt Crafting
+  runs: 5
+- technique: AML.T0080.000
+  vector: direct_chat
+  path: atomics/AML.T0080.000/direct_chat.md
+  guid: 60099a7c-929d-40de-851f-baa471aae7bc
+  display_name: AI Agent Context Poisoning - Memory
+  runs: 5
+- technique: AML.T0080
+  vector: direct_chat
+  path: atomics/AML.T0080/direct_chat.md
+  guid: 166676d7-bacb-4c81-9a1e-dcadab001fd7
+  display_name: AI Agent Context Poisoning
+  runs: 5
+- technique: AML.T0083
+  vector: direct_chat
+  path: atomics/AML.T0083/direct_chat.md
+  guid: 015e9cc6-0ebd-4734-a613-30398d2637fe
+  display_name: Credentials from AI Agent Configuration
+  runs: 5
+- technique: AML.T0084
+  vector: direct_chat
+  path: atomics/AML.T0084/direct_chat.md
+  guid: 638bb898-ffb9-4d8e-a709-f42930fcc87b
+  display_name: Discover AI Agent Configuration
+  runs: 5
+- technique: AML.T0086
+  vector: a2a_message
+  path: atomics/AML.T0086/a2a_message.md
+  guid: bc586373-a997-496e-b67d-7d9ddbf905f4
+  display_name: Exfiltration via Agent Tool (Agent-to-Agent Variant)
   runs: 5
 - technique: AML.T0086
   vector: mcp_server
@@ -55,11 +103,23 @@ atomics:
   guid: 6d7e8f9a-0b1c-4d2e-bf3a-4c5d6e7f8a9b
   display_name: Prompt Infiltration via Public-Facing Application
   runs: 5
+- technique: AML.T0097
+  vector: direct_chat
+  path: atomics/AML.T0097/direct_chat.md
+  guid: 33116d08-d1df-420d-b0b6-895d231879b0
+  display_name: Memory Exfiltration
+  runs: 5
 - technique: AML.T0098
   vector: tool_response
   path: atomics/AML.T0098/tool_response.md
   guid: 7e8f9a0b-1c2d-4e3f-804a-5b6c7d8e9f0a
   display_name: AI Agent Tool Credential Harvesting
+  runs: 5
+- technique: AML.T0099
+  vector: mcp_server
+  path: atomics/AML.T0099/mcp_server.md
+  guid: dcbcf871-6ab8-4131-b8ea-47f9e8835dc7
+  display_name: AI Agent Tool Data Poisoning
   runs: 5
 - technique: AML.T0099
   vector: tool_response
@@ -72,4 +132,34 @@ atomics:
   path: atomics/AML.T0104/mcp_server.md
   guid: 9a0b1c2d-3e4f-4a5b-826c-7d8e9f0a1b2c
   display_name: Publish Poisoned AI Agent Tool
+  runs: 5
+- technique: AML.T0108
+  vector: a2a_message
+  path: atomics/AML.T0108/a2a_message.md
+  guid: 95a245e0-b19d-462d-aca7-423533c851be
+  display_name: AI Agent as C2 (Agent-to-Agent Variant)
+  runs: 5
+- technique: AML.T0108
+  vector: mcp_server
+  path: atomics/AML.T0108/mcp_server.md
+  guid: 05cff174-9d89-4a7e-b21e-98314e7f176d
+  display_name: AI Agent (as Command and Control)
+  runs: 5
+- technique: AML.T0110
+  vector: mcp_server
+  path: atomics/AML.T0110/mcp_server.md
+  guid: 81cd4303-abdf-48b5-8291-41a298a6eb84
+  display_name: Tool Poisoning
+  runs: 5
+- technique: AML.T0112
+  vector: direct_chat
+  path: atomics/AML.T0112/direct_chat.md
+  guid: 1fee8ed9-4184-4c0d-b616-f681a7cf79e4
+  display_name: Resource Exhaustion
+  runs: 5
+- technique: UNCLASSIFIED.self-replicating-memory
+  vector: direct_chat
+  path: atomics/unclassified/self-replicating-memory/direct_chat.md
+  guid: 27a359bc-80c4-48e1-b02e-0664b0dc0efa
+  display_name: Self-Replicating Memory Entry
   runs: 5
