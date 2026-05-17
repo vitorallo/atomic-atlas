@@ -6,9 +6,9 @@
 
 MITRE ATLAS v5.6.0 has 170 techniques and 57 case studies. The 29 high-confidence agentic techniques (51 including probable) have almost zero public runnable tests.
 
-Without runnable tests, every "ATLAS-aligned" product claim is unverifiable. Vendors and security teams alike say "we cover X" with no mechanical way to check. This is the same failure mode ATT&CK had before Atomic Red Team in 2017.
+Without runnable tests, every "ATLAS-aligned" product claim is unverifiable. Vendors and security teams alike say "we cover X" with no mechanical way to check. This is the same that happened to ATT&CK had before Atomic Red Team in 2017. MITRE provided 'arsenal' but here we are going way deeper.
 
-atomic-atlas fills that gap.
+atomic-atlas fills that gap and provide the atomic testing base to test AI agentic systems.
 
 ---
 
