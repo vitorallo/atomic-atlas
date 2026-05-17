@@ -1,36 +1,62 @@
 # atomic-atlas — Product Requirements Document
 
-**Version**: 0.1  
-**Date**: 2026-05-06  
-**Author**: Vito Rallo, Cybersecurity Consult Partner · Benelux · Kyndryl  
+**Version**: 0.4 (pre-release)
+**Date**: 2026-05-17
+**Author**: Vito Rallo, Cybersecurity Consult Partner · Benelux · Kyndryl
 **Status**: Active development
+**Canonical companions**: [`SPEC.md`](SPEC.md) (atomic format), [`README.md`](README.md) (install + quickstart)
+
+---
+
+## Thesis
+
+MITRE ATT&CK had a rich taxonomy and almost no runnable test coverage until Red Canary shipped **Atomic Red Team** in 2017 — small, technique-keyed, executable tests that turned "we detect T1059" from a claim into something you could fire and measure. MITRE **ATLAS** (the AI/agentic equivalent) is in exactly the pre-2017 position today: 170 techniques, 57 case studies, and no public, runnable, technique-keyed adversarial tests.
+
+**atomic-atlas is Atomic Red Team for ATLAS** — an open, community-built library of technique-keyed, *delivery-vector-aware* atomic tests, backed by Microsoft PyRIT for orchestration and paired with an agent that adapts each abstract technique into a payload that actually lands on a specific target.
 
 ---
 
 ## Problem
 
-MITRE ATLAS has 167 techniques and 57 documented case studies. In the last 12 months, 21 new agent-specific techniques were added — MCP supply-chain attacks, agent-to-agent context poisoning, tool credential harvesting, resource exhaustion. None of these have public, runnable adversarial tests.
+Every "ATLAS-aligned" security claim today is **unfalsifiable**. A team that says "we cover indirect prompt injection (AML.T0051.001)" has no mechanical way to prove it. Three concrete gaps cause this.
 
-This means every "ATLAS-aligned" security product claim is **unfalsifiable**. A SOC team that says "we detect T0051.001 indirect prompt injection" has no mechanical way to verify it. The security community is in the same position ATT&CK was in before Red Canary shipped Atomic Red Team in 2017 — rich taxonomy, zero test coverage.
+### Problem 1 — Coverage is tactic-level, not technique-level
 
-The specific gap is **agentic delivery vectors**. Existing tools (PyRIT, garak, Promptfoo) cover LLM testing via HTTP chat endpoints well. They do not cover how attacks arrive through the 11 other entry points that agentic systems expose: RAG corpus injection, MCP server poisoning, tool response interception, document upload pipelines, webhook-triggered agents, email, agent-to-agent messages, computer-use surfaces, and model API access.
+The most-cited ATLAS-aligned open-source tool, **Promptfoo**, maps **39 generic red-team plugins to 14 of ATLAS's 16 tactics**. It references **zero** ATLAS technique IDs, covers **0 of the 2 AI-native tactics** (AI Model Access, AI Attack Staging) in its primary mapping, and ships no technique-keyed atomic tests. Tactic-level mapping answers "are we roughly in this area"; it cannot answer "does technique AML.T0083 actually work against *this* agent."
+
+*(Source: `working/promptfoo` `src/redteam/constants/frameworks.ts`, retrieved 2026-05-07.)*
+
+### Problem 2 — Same technique, different door
+
+Existing tooling (PyRIT, garak, Promptfoo) tests LLMs well over **one** channel: the HTTP chat endpoint. Agentic systems expose **12 distinct entry vectors**: `direct_chat`, `system_prompt`, `rag_corpus`, `document_upload`, `tool_response`, `mcp_server`, `web_fetch`, `webhook`, `email`, `a2a_message`, `computer_use`, `model_api`. The *same* technique delivered through a poisoned RAG document is a different attack from the same technique typed into chat. Coverage is therefore a **2-D matrix (technique × vector)**, and a test must exist per *cell*, not per technique alone.
+
+### Problem 3 — Techniques are abstract; payloads are target-specific
+
+A technique definition is universal; the wording that triggers it is not. A jailbreak that extracts credentials from DVAA's LegacyBot does not land on a travel-agency chatbot. Static payload strings rot on contact with a real target. The fix is to treat the atomic as **intent** and let an LLM adapt the concrete payload to the specific target — "an agent that tests an agent."
+
+### Why this matters now
+
+ATLAS v5.6.0 (published 2026-05-04) flags **29 techniques as high-confidence agentic** (51 including probable) out of 170. atomic-atlas currently has runnable atomics for **12 of those 29 (41%)**. The taxonomy is racing ahead of any executable coverage — exactly the ATT&CK situation, pre-2017.
 
 ---
 
 ## Goal
 
-Ship an open-source, community-built library of technique-keyed, vector-aware atomic adversarial tests for MITRE ATLAS — backed by PyRIT for payload generation and orchestration, extended with new PyRIT targets for the agentic vectors that existing tools can't reach.
+Ship an open-source, community-built library of **technique-keyed, vector-aware atomic adversarial tests for MITRE ATLAS**, with two interchangeable runners over a shared catalog:
 
-The first public version (v0.1) must be demoable live in a keynote setting: `recon → exec → report` in under 60 seconds against a local DVAA instance.
+1. a **CLI** (`recon → list → adapt → exec → report`) backed by PyRIT, and
+2. an **agentic skill** (an LLM agent that reads atomic intent, inspects the target, and reasons about delivery for vectors with no hard-coded adapter).
+
+The flagship demo must run **`recon → exec → report` end-to-end against a local DVAA instance in under 60 seconds**, producing a verdict-shaped finding with captured evidence.
 
 ---
 
 ## Non-goals
 
-- **Not a standalone LLM red-team tool.** PyRIT, garak, and Promptfoo already do HTTP/chat-endpoint testing. We don't re-implement what they do well.
-- **Not a SaaS or commercial product.** Community library, MIT license.
-- **Not a comprehensive ATLAS catalog.** v0.1 targets 9 techniques × focused agentic vectors. Breadth grows via community contribution.
-- **Not a detection engineering tool.** atomic-atlas is offensive (red-team). Defensive use (verifying detection coverage) is a side effect, not the primary design goal.
+- **Not a standalone LLM red-team tool.** PyRIT, garak, and Promptfoo do HTTP/chat-endpoint testing well; we extend, not replace.
+- **Not a SaaS or commercial product.** Community library, MIT-licensed. Not a vendor, not a product.
+- **Not a comprehensive ATLAS catalog at v0.x.** Breadth grows by community contribution; the format is deliberately easy enough to author a new cell in under an hour.
+- **Not primarily a detection-engineering tool.** atomic-atlas is offensive (red-team). Verifying blue-team detection coverage is a valuable side effect, not the design center.
 
 ---
 
@@ -38,139 +64,124 @@ The first public version (v0.1) must be demoable live in a keynote setting: `rec
 
 | User | Need |
 |---|---|
-| **AI red-teamer** | Run reproducible ATLAS-keyed tests against a target agent; produce a coverage report for a client |
-| **Security engineer / SOC** | Verify that a deployed agent behaves correctly under known ATLAS attacks; generate an ATLAS Navigator layer showing detection coverage |
-| **Researcher / keynote speaker** | Demonstrate the agentic coverage gap concretely; have a live demo that shows the gap and the fix |
-| **Community contributor** | Add a new (technique, vector) atomic to the library; know the format is simple enough to do in an hour |
+| **AI red-teamer** | Reproducible ATLAS-keyed tests against a target agent; an engagement report a client will read |
+| **Security engineer / SOC** | Verify a deployed agent holds under known ATLAS attacks; produce an ATLAS Navigator coverage layer |
+| **Researcher / keynote speaker** | Demonstrate the agentic coverage gap concretely, then show the fix live |
+| **Community contributor** | Add a `(technique × vector)` atomic in under an hour, with `validate` as the only gate |
+
+---
+
+## How it works (architecture essence)
+
+- **The filesystem is the schema.** One markdown file per `(technique × vector)` cell — path `atomics/<ATLAS-id>/<vector>.md` encodes both dimensions. ~5 lines of YAML frontmatter + a prose body (Why this matters, Prerequisites, Attack strategy, Interaction, Success criteria, ATLAS mitigations, Cleanup). No registry, no plugin loader. The format is **AI-generatable**: an LLM given `SPEC.md` writes a valid atomic unaided.
+- **Intent over implementation.** The atomic says *what* the attack does and *how to recognize success* in plain prose. The runner figures out *how* to execute it against the specific target.
+- **PyRIT under the hood, optional at install.** atomic-atlas contributes new PyRIT `PromptTarget` subclasses for agentic vectors and uses `RedTeamingAttack`/`AttackAdversarialConfig` for multi-turn mutation. PyRIT is an **optional extra** (`[orchestrator]`) — `list`/`recon`/`report`/`validate`/MCP server run without it.
+- **LLM where it matters.** `adapt` tunes the seed payload to the target (consuming atomic intent + `target_context` + recon JSON + prior evidence). A **three-tier scorer** (LLM judge → indicators → deterministic substring fallback) produces a binary verdict *and* first-class structured **Evidence** (`tier`, `judge_reasoning`, `matched_indicators`, `extracted`, `duration_ms`).
+- **Evidence is the finding.** `exec` and `runbook exec` append timestamped JSONL into a per-engagement directory. `report --format findings` aggregates by `(atomic, target)` into a stakeholder-facing markdown: verdict (`VULNERABLE` / `PARTIALLY_VULNERABLE` / `NOT_VULNERABLE` / `INCONCLUSIVE`) + severity + summary + extracted artifacts + ATLAS mitigations.
+- **Runbooks are first-class.** Ordered atomic chains (kill chains) with `on_failure` policies (stop / continue / retry).
+- **Runs, not pass/fail.** Every atomic reports a success rate over N runs — LLMs are non-deterministic and coverage claims must reflect that.
+- **Authorization is mandatory; credentials never in atomics.** `--authorized` per exec; secrets only in target profiles via `${ENV}` references.
 
 ---
 
 ## Requirements
 
 ### R1 — Atomic format (MUST)
-- One `.md` file per `(ATLAS technique × entry vector)` cell
-- YAML frontmatter: technique ID, vector, GUID, run count, PyRIT orchestrator, required target capabilities
-- Markdown body: Why this matters, Prerequisites, Attack strategy, Interaction, Success criteria, ATLAS mitigations, Cleanup
-- Frontmatter validated by JSON Schema in CI
-- Format is AI-generatable: an LLM given the spec can write a new valid atomic without additional guidance
+One `.md` per `(technique × vector)`. YAML frontmatter (technique ID, display name, vector, GUID, runs, `target_requires`, `multi_turn`, `success_indicators`, `judge_*`, `extractors`, `scoring`) validated by JSON Schema in CI. AI-generatable from `SPEC.md` alone.
 
-### R2 — Entry vector taxonomy (MUST)
-- 12 named vectors covering all channels through which untrusted input can reach an agent
-- Coverage is a 2D matrix: technique × vector; a test exists per cell, not per technique alone
+### R2 — Entry-vector taxonomy (MUST)
+The **12** canonical vectors enumerated in `SPEC.md`. Coverage is the technique × vector matrix; a cell with no atomic is an explicit gap, not an implicit pass.
 
 ### R3 — PyRIT integration (MUST)
-- atomic-atlas is a PyRIT extension, not a standalone orchestrator
-- PyRIT handles payload generation (RedTeamingOrchestrator) and multi-turn orchestration
-- atomic-atlas contributes new PyRIT `PromptTarget` subclasses for agentic vectors
+atomic-atlas is a PyRIT extension, not a standalone orchestrator. PyRIT handles payload generation and multi-turn orchestration; atomic-atlas contributes agentic `PromptTarget` subclasses. PyRIT optional at install (`[orchestrator]` extra).
 
 ### R4 — Agentic targets (MUST)
-- `RAGCorpusTarget`: inject payload into ChromaDB, Pinecone, Azure AI Search, or generic HTTP ingest; trigger retrieval; cleanup
-- `MCPServerTarget`: register poisoned tool on MCP server; deregister on cleanup
-- `ToolResponseTarget`: mock tool server serving a poisoned response; stop on cleanup
-- `DocumentUploadTarget`: upload payload file; trigger processing; delete on cleanup
-- `WebhookTarget`: POST crafted payload to agent inbound webhook
+`RAGCorpusTarget` (ChromaDB / Azure AI Search / HTTP ingest), `MCPServerTarget` (`http_registry_stub` + real `mcp_jsonrpc`), `ToolResponseTarget`, `DocumentUploadTarget`, `WebhookTarget` (port-0 callback), `DirectChatTarget` (wraps PyRIT `OpenAIChatTarget`). Each sets up, triggers, and cleans up.
 
 ### R5 — CLI (MUST)
-- `atomic-atlas recon --target <url>`: enumerate vectors, fingerprint guardrails, suggest techniques
-- `atomic-atlas exec <technique/vector> --target <url> --authorized`: run atomic via PyRIT
-- `atomic-atlas report --input results.json --format navigator|coverage|markdown`
-- `atomic-atlas validate [path]`: check frontmatter schema
+`recon --target <url>` · `list` · `adapt <tech/vector> --target …` · `exec <tech/vector> --target … --authorized` · `report --engagement <dir> --format navigator|coverage|markdown|findings` · `validate [path]` · `runbook`.
 
-### R6 — ATLAS Navigator output (MUST)
-- `report --format navigator` produces a valid Navigator layer JSON
-- Color-coded by success rate; cells with zero atomics are left uncolored
+### R6 — Payload adaptation (MUST)
+`adapt` emits a domain-tuned bundle (rationale + payload + suggested observations + suggested indicators) from atomic intent, `target_context`, recon JSON, and prior evidence. Clean handoff to `exec --payload-file`. Audit trail via `generator_prompt_hash`.
 
-### R7 — Agent runner / Claude Code skill (SHOULD)
-- Skill reads atomic intent, inspects target, reasons about delivery for novel implementations
-- Handles vectors with no hard-coded adapter (Weaviate RAG, custom MCP, etc.)
-- Evaluates success semantically against `## Success criteria` prose
+### R7 — Scoring + Evidence (MUST)
+Three-tier scorer (judge > indicators > legacy substring). Every scored run emits a first-class `Evidence` record. No silent downgrade — the tier used is recorded.
 
-### R8 — Authorization gate (MUST)
-- CLI requires `--authorized` flag per exec run
-- Skill asks user to confirm authorization before executing
-- No test executes without explicit confirmation
+### R8 — Engagement memory + Findings (MUST)
+Append-only JSONL per engagement dir (default `./atomic-atlas-engagement/`; override `--engagement` / `ATOMIC_ATLAS_ENGAGEMENT_DIR`). `report --format findings` aggregates to verdict + severity (5 levels, optional `severity_floor`) + summary + artifacts + mitigations. Filters `--target`, `--since`. No new LLM call.
 
-### R9 — Authentication (MUST)
-- Credentials live in target profiles only; never in atomic files
-- Env var references (`${VAR_NAME}`) in all profile credential fields
-- Azure DefaultAzureCredential supported for Azure AI Search and Azure OpenAI targets
+### R9 — ATLAS Navigator output (MUST)
+`report --format navigator` emits a valid Navigator layer, colour-coded by success rate; zero-atomic cells left uncoloured (the gap stays visible).
 
-### R10 — Contribution path (SHOULD)
-- `_TEMPLATE/vector_template.md` for new contributors
-- `atomic-atlas validate` is the CI gate for PRs
-- `index.yaml` catalog auto-generated from the atomics directory
+### R10 — Agentic skill / agent runner (SHOULD)
+A skill reads atomic intent, inspects the target, and reasons about delivery for vectors with no hard-coded adapter (custom MCP, Weaviate RAG, …), evaluating success semantically against the `## Success criteria` prose. Claude Code skill today; generic-agent skill next.
+
+### R11 — Authorization + authentication (MUST)
+`--authorized` per exec; skill confirms authorization before executing. Credentials only in target profiles via `${ENV}`; Azure `DefaultAzureCredential` supported.
+
+### R12 — Contribution path (SHOULD)
+`_TEMPLATE/` for new contributors; `validate` is the CI gate; auto-generated catalog index; `atomics/unclassified/<slug>/` convention for atomics with no current ATLAS technique.
 
 ---
 
 ## Milestones
 
 ### v0.1 — Keynote-ready (shipped)
-- [x] **27 atomics** across 19 ATLAS-real techniques + 1 unclassified slug (was 12 → expanded during the DVAA harvest)
-- [x] JSON Schema frontmatter validation (accepts AML.TXXXX and UNCLASSIFIED.<slug>)
-- [x] **RAGCorpusTarget** (ChromaDB + Azure AI Search + HTTP ingest)
-- [x] **MCPServerTarget** with two modes: `http_registry_stub` placeholder and `mcp_jsonrpc` real JSON-RPC 2.0
-- [x] **ToolResponseTarget**, **DocumentUploadTarget**, **WebhookTarget** (port-0 callback)
-- [x] **DirectChatTarget** wrapping PyRIT's OpenAIChatTarget — closed the `direct_chat` UnsupportedVector gap
-- [x] **CLI: recon / exec / report / validate / list / runbook**
-- [x] ATLAS Navigator reporter, coverage matrix reporter
-- [x] Claude Code skill (CLI-driven)
-- [x] **MCP server** (`atomic-atlas-mcp`) — read-only tools `list_atomics` / `read_atomic` / `recon_target`, no PyRIT required
-- [x] **Runbooks as a first-class concept** — ordered atomic chains with on_failure policies (stop / continue / retry); 22 DVAA runbooks shipped covering the entire DVAA v0.8.0 catalog
-- [x] **`--hitl` flag** on `exec` and `runbook exec` for interactive operator confirmation per outbound send
-- [x] **`target_context`** profile field flowing into the attacker LLM's system prompt for domain-aware payload adaptation
-- [x] **`RedTeamingAttack` proper integration** with `AttackAdversarialConfig` so `RedTeamingOrchestrator`-tagged atomics actually drive multi-turn mutation
-- [x] PyRIT 0.13 API migration (orchestrators → attacks)
-- [x] PyRIT as **optional dependency** (`[orchestrator]` extra) so list / recon / report / validate / MCP server work in lightweight installs
-- [x] **ATLAS v5.6.0 framework data vendored** at `data/atlas/`
-- [x] **`atomics/unclassified/` convention** for atomics with no current ATLAS technique
-- [x] SPEC.md, PRD.md, runbooks/README.md, docs/quickstart.md, docs/install.md, docs/targets.md, docs/agent-runner.md, docs/atlas-coverage.md
-- [ ] Initial git tag `v0.1.0`
-- [ ] Live keynote dry-run (architecture verified end-to-end against DVAA; full keynote rehearsal still TODO)
+- [x] Atomic format + JSON Schema validation (`AML.TXXXX` and `UNCLASSIFIED.<slug>`)
+- [x] `RAGCorpusTarget`, `MCPServerTarget` (stub + real JSON-RPC 2.0), `ToolResponseTarget`, `DocumentUploadTarget`, `WebhookTarget`, `DirectChatTarget`
+- [x] CLI: `recon` / `exec` / `report` / `validate` / `list` / `runbook`
+- [x] ATLAS Navigator + coverage-matrix reporters
+- [x] Claude Code skill (CLI-driven); read-only MCP server (`atomic-atlas-mcp`)
+- [x] Runbooks first-class; **22 DVAA runbooks** covering the full DVAA v0.8.0 catalog
+- [x] `--hitl`, `target_context`, `RedTeamingAttack` integration, PyRIT 0.13 migration, PyRIT optional
+- [x] ATLAS **v5.6.0** vendored at `data/atlas/`; `atomics/unclassified/` convention
+- [ ] Initial git tag `v0.1.0`; full keynote rehearsal (architecture verified live against DVAA)
 
-### v0.2 — A2A, scoring, kill chains
-- [ ] **A2ATarget** — unblocks live exec for `RB-DVAA-L4-02` (3 a2a_message atomics already shipped)
-- [ ] **WebFetchTarget**, **EmailTarget**, **ComputerUseTarget**
-- [x] **`success_indicators` frontmatter field** + **LLM judge scorer** — three-tier scorer stack (judge > indicators > legacy substring) plus first-class `Evidence` (`tier`, `judge_reasoning`, `matched_indicators`, `extracted`, `duration_ms`). Live-verified against DVAA: judge tier extracts real LegacyBot creds (`sk-dvaa-openai-test-key-…`, `dvaa-admin-secret`) end-to-end. See [`docs/scoring.md`](docs/scoring.md). [openspec/changes/scoring-tiers]
-- [x] **LLM-driven payload generator** (`atomic-atlas adapt`) + **clean handoff to exec** (`exec --payload-file`). Generator consumes the atomic's intent, target_context, recon JSON, and prior `results.json` evidence to emit a domain-tuned payload bundle (rationale + payload + suggested observations + suggested indicators). Audit trail via `generator_prompt_hash`. Live-verified end-to-end against DVAA-LegacyBot (2/2 success in 15.8s). See [`docs/adapt.md`](docs/adapt.md). [openspec/changes/payload-adapter]
-- [x] **Engagement memory + Finding model + `report --format findings`**. `exec` and `runbook exec` accumulate timestamped JSONL into a per-engagement directory (default `./atomic-atlas-engagement/`, override via `--engagement` or `ATOMIC_ATLAS_ENGAGEMENT_DIR`). `report --format findings` aggregates by `(atomic, target)`, emits a stakeholder-facing markdown — verdict (`VULNERABLE` / `PARTIALLY_VULNERABLE` / `NOT_VULNERABLE` / `INCONCLUSIVE`) + severity (5 levels, with optional `severity_floor` frontmatter) + summary (strongest judge_reasoning) + extracted artifacts + ATLAS mitigations parsed from atomic body. Filters: `--target`, `--since`. No new LLM call. 37 new tests; live-verified end-to-end. [commit `4c5421d`]
-- [ ] **Canonical kill-chain runbooks** under `runbooks/kill-chains/`: `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`
-- [ ] **Engagement-template runbooks** under `runbooks/engagement/`
-- [ ] Atomic catalog expansion: 17 new ATLAS-v5.6.0 agentic techniques (T0070, T0071, T0080.x, T0081, T0082, T0083, T0084.x, T0085.x, T0103, T0108, T0112.000)
-- [ ] Lobster — vulnerable LangGraph agent shipped at `examples/lobster/`, ATLAS-tagged in source
-- [ ] Cost estimation before exec; `last_verified_date` field + model-drift CI
-- [ ] `runbook report --format navigator|markdown|kill-chain`
+### v0.2 — Scoring, adaptation, engagement memory (shipped)
+- [x] `success_indicators` + **LLM judge scorer** — three-tier stack + first-class `Evidence`; live-verified against DVAA (real LegacyBot creds extracted end-to-end). See [`docs/scoring.md`](docs/scoring.md).
+- [x] **LLM-driven `adapt`** + `exec --payload-file` handoff; live-verified against DVAA-LegacyBot (2/2 in 15.8s). See [`docs/adapt.md`](docs/adapt.md).
+- [x] **Engagement memory + Finding model + `report --format findings`** (commit `4c5421d`); post-merge simplification pass (`_resolve_target_id`, `asdict`, flattened `aggregate`).
+- [ ] `A2ATarget` (unblocks `RB-DVAA-L4-02`; 3 `a2a_message` atomics already shipped)
+- [ ] Canonical kill-chain runbooks (`indirect-pi-to-tool-exfil`, `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`) + engagement-template runbooks
+- [ ] Catalog expansion toward the remaining high-confidence agentic techniques
+- [ ] Cost estimation before exec; `last_verified_date` + model-drift CI; `runbook report` formats
 
-### v0.3 — Community contribution pipeline
-- [ ] GitHub Actions CI: validate all atomics + runbooks on PR
-- [ ] Auto-generated index.yaml and coverage badge
-- [ ] Pinecone adapter for RAGCorpusTarget
-- [ ] PyPI release
-- [ ] Sibling vulnerable-agent examples (OpenAI Agents SDK, Anthropic SDK)
-- [ ] **`HITLTargetWrapper`** auto-confirm threshold (`--hitl-threshold N`)
-- [ ] **TelegramChatTarget** + **DiscordChatTarget** (real-world deployment surfaces)
+### v0.3 — Community pipeline
+- [ ] GitHub Actions CI (validate all atomics + runbooks on PR); auto-generated index + coverage badge
+- [ ] PyPI release; Pinecone adapter; sibling vulnerable-agent examples (OpenAI Agents SDK, Anthropic SDK)
+- [ ] `HITLTargetWrapper` auto-confirm threshold; `TelegramChatTarget` + `DiscordChatTarget`
+
+### v0.4 — The agent that tests the agent
+- [ ] `WebFetchTarget`, `EmailTarget`, `ComputerUseTarget` (12/12 canonical vectors)
+- [ ] Generic-agent skill (beyond Claude Code) — the autonomous picker that reads recon, chooses techniques, adapts payloads, and reasons about novel delivery
+- [ ] Blue-agent guardrail mode; streaming evidence; parallel runs
+- [ ] Lobster — vulnerable LangGraph agent at `examples/lobster/`, ATLAS-tagged in source
 
 ---
 
 ## Success metrics
 
-| Metric | v0.1 target | v0.1 actual |
+| Metric | Target | Actual (2026-05-17, repo-derived) |
 |---|---|---|
-| Seed atomics | ≥ 12 | **27** |
-| ATLAS techniques covered | ≥ 9 | **19** + 1 unclassified slug |
-| Entry vectors with at least one atomic | ≥ 5 | **7** |
-| Parser test pass rate | 100% | **100%** (49/49 + 1 skipped) |
-| Frontmatter validation: zero failures | 100% | **100%** (27 atomics + 22 runbooks) |
-| ATLAS v5.6.0 high-confidence agentic technique coverage | n/a | **19 / 29 (66%)** |
-| ATLAS tactics traversed by runbooks | n/a | **9 of 16** |
+| Seed atomics | ≥ 12 | **36** (2 unclassified) |
+| Distinct ATLAS techniques with an atomic | ≥ 9 | **19** |
+| High-confidence agentic coverage | n/a | **12 / 29 (41%)** · 15/51 incl. probable |
+| Canonical entry vectors with ≥ 1 atomic | ≥ 5 | **7 / 12** |
+| Frontmatter validation failures | 0 | **0** (36 atomics + 22 runbooks) |
+| Test suite | 100% | **165 passed, 1 skipped** |
 | DVAA challenges mapped to runbooks | n/a | **22 / 22** |
-| Keynote demo end-to-end (recon → exec → navigator) | Working against DVAA | Architecture verified live; full keynote rehearsal TODO |
-| README time-to-first-test | < 5 minutes for a practitioner with Python and DVAA | < 5 min via docs/quickstart.md |
+| ATLAS tactics traversed by runbooks | n/a | **9 / 16** |
+| Flagship demo (`recon → exec → report`) | works vs DVAA | architecture verified live; full keynote rehearsal TODO |
+| README time-to-first-test | < 5 min | < 5 min via `docs/quickstart.md` |
+
+*ATLAS framework totals (v5.6.0, `data/atlas/MANIFEST.md`): 16 tactics (2 AI-native), 170 techniques incl. sub-techniques (101 top-level), 57 case studies, published 2026-05-04.*
 
 ---
 
 ## Open questions
 
-1. **PyPI name**: `atomic-atlas` is available; confirm before v0.3 release.
-2. **MITRE coordination**: Worth notifying MITRE ATLAS team once v0.1 is public? Would strengthen legitimacy and potentially drive Arsenal collaboration.
-3. **DVAA dependency**: DVAA (opena2a-org) must expose a ChromaDB-compatible RAG endpoint for the flagship demo. Confirm this before the keynote.
-4. **MCP tool registry format**: No standard yet for registering tools to an MCP server via HTTP. The MCPServerTarget currently uses a placeholder; needs real MCP server implementation target.
+1. **PyPI name** — `atomic-atlas` available; confirm before v0.3.
+2. **MITRE coordination** — notify the ATLAS team once v0.1 is public? Could strengthen legitimacy and drive Arsenal collaboration.
+3. **DVAA dependency** — DVAA must expose a ChromaDB-compatible RAG endpoint for the flagship demo; confirm before the keynote.
+4. **MCP tool-registry format** — no standard yet for registering tools to an MCP server over HTTP; `MCPServerTarget` uses a placeholder pending a real implementation.
+5. **Agentic-set definition** — adopt `29 high-confidence` as the canonical coverage denominator (vs `51` incl. probable)? The deck and PRD now both use 29; confirm this is the number we defend publicly.

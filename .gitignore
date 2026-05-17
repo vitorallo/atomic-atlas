@@ -37,6 +37,11 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Slide authoring sources — track the exported PDF, not the editable deck
+*.pptx
+*.key
+~$*
+
 # Secrets & local config
 .env
 .env.*
