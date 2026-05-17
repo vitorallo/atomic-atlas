@@ -217,6 +217,7 @@ async def run_atomic(
         errors=0,
         duration_seconds=0.0,
     )
+    attack = None
 
     try:
         try:
@@ -299,6 +300,12 @@ async def run_atomic(
             result.run_details.append(detail)
     finally:
         await target.cleanup()
+        _tmp_prompt = getattr(attack, "_atomic_atlas_tmp_prompt", None)
+        if _tmp_prompt:
+            try:
+                os.unlink(_tmp_prompt)
+            except OSError:
+                pass
 
     result.duration_seconds = time.monotonic() - start
     return result
@@ -387,11 +394,17 @@ def _build_attack(
             target=attacker_target,
             system_prompt_path=tmp.name,
         )
-        return RedTeamingAttack(
+        rt_attack = RedTeamingAttack(
             objective_target=target,
             attack_adversarial_config=adversarial_config,
             attack_scoring_config=scoring_config,
         )
+        # PY-004 (CWE-377): the NamedTemporaryFile(delete=False) above is not
+        # auto-removed. Stash its path so run_atomic's finally unlinks it after
+        # the attack completes — PyRIT reads system_prompt_path for the whole
+        # attack, so it can't be deleted before that.
+        rt_attack._atomic_atlas_tmp_prompt = tmp.name
+        return rt_attack
     except Exception as exc:
         # Soft fallback — attacker LLM unavailable, proceed without it.
         _log.warning(
