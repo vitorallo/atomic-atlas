@@ -104,6 +104,7 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 | Doc | What it covers |
 |---|---|
 | [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review; `adapt` → `exec --payload-file` chain |
+| [docs/sample_execution.md](docs/sample_execution.md) | Verbatim walkthrough of one real live run (DVAA LegacyBot, `AML.T0083`): every command + output, why multi-turn exec takes minutes, how to read the VULNERABLE/HIGH finding |
 | [docs/use-cases.md](docs/use-cases.md) | Three end-to-end walkthroughs: smoke a single technique, chained kill chain with `adapt`, full engagement runbook |
 | [docs/benchmarks.md](docs/benchmarks.md) | 12 live runs across 6 DVAA bots — same response, three judge verdicts; runtime as fitness signal; reproducible commands |
 | [docs/cli-reference.md](docs/cli-reference.md) | Per-subcommand reference: every flag with copy-pasteable examples |
