@@ -24,7 +24,7 @@ Agents with shared or weakly-scoped memory leak content across conversations and
 
 ## Attack strategy
 
-Probes target the memory read surface: ask the agent to recall content "from earlier" or "from the last conversation"; supply guessable keys (user IDs, common topic strings); use search-shaped queries that bypass per-conversation scoping. `RedTeamingOrchestrator` mutates across the variants.
+Probes target the memory read surface: ask the agent to recall content "from earlier" or "from the last conversation"; supply guessable keys (user IDs, common topic strings); use search-shaped queries that bypass per-conversation scoping. `RedTeamingAttack` mutates across the variants.
 
 Payload seed: `payloads/memory_recall_probe.md`
 

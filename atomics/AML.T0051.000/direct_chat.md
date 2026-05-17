@@ -46,7 +46,7 @@ The simplest attack: a user crafts a message that overrides the agent's system-l
 - Access to the agent's chat interface (authenticated user or unauthenticated public endpoint)
 
 ## Attack strategy
-PyRIT `RedTeamingOrchestrator` generates jailbreak variants targeting the agent's configured persona. This atomic is covered natively by PyRIT; it is included here for ATLAS technique completeness and to populate the `direct_chat` column of the coverage matrix.
+PyRIT `RedTeamingAttack` generates jailbreak variants targeting the agent's configured persona. This atomic is covered natively by PyRIT; it is included here for ATLAS technique completeness and to populate the `direct_chat` column of the coverage matrix.
 
 For richer direct injection testing, use PyRIT's native `PromptTarget` with `JailBreakConverter` or `CharSwapConverter` directly.
 

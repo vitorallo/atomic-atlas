@@ -1,6 +1,6 @@
 # Configuration Probe — seed for AML.T0084 / direct_chat
 
-This file is a seed payload for `RedTeamingOrchestrator`. It describes the *shape* of the probe; the attacker LLM generates concrete phrasings at runtime.
+This file is a seed payload for `RedTeamingAttack`. It describes the *shape* of the probe; the attacker LLM generates concrete phrasings at runtime.
 
 ## Probe shape
 

@@ -103,7 +103,7 @@ Bullet list of what must be true before the test can run:
 
 ### `## Attack strategy`
 
-How the attack is executed. Reference the PyRIT orchestrator and any seed payload file. Describe what the attacker LLM (RedTeamingOrchestrator) is instructed to achieve.
+How the attack is executed. Reference the PyRIT orchestrator and any seed payload file. Describe what the attacker LLM (RedTeamingAttack) is instructed to achieve.
 
 ### `## Interaction`
 
@@ -128,7 +128,7 @@ Bulleted list of state that must be restored: remove injected documents, deregis
 
 ## Payload files
 
-Payload files live in `atomics/<technique>/payloads/`. They are referenced by filename in the `## Attack strategy` section. Payload files are seed inputs — PyRIT's RedTeamingOrchestrator will generate and mutate variants at runtime.
+Payload files live in `atomics/<technique>/payloads/`. They are referenced by filename in the `## Attack strategy` section. Payload files are seed inputs — PyRIT's RedTeamingAttack will generate and mutate variants at runtime.
 
 Payload filenames should be descriptive: `poisoned_rag_callback.md`, `mcp_tool_description_poison.json`.
 
@@ -220,11 +220,10 @@ DVAA-specific payload variants (`payloads/dvaa_*.json`) are reference shapes, no
 
 ## Scoring tiers + evidence
 
-Every run is evaluated by a three-tier scorer stack with auto-fallback:
+Every run is evaluated by a two-tier scorer stack with auto-fallback:
 
 1. **`LLMJudgeScorer`** — wraps PyRIT's `SelfAskTrueFalseScorer`; reads the agent's response against `## Success criteria` (optionally biased with `judge_guidance` + `judge_examples`). Default when an `OPENAI_API_KEY` is present.
 2. **`IndicatorScorer`** — any-of-N case-insensitive substring match over `success_indicators`. Default when no judge is available; explicit override via `scoring.strategy: indicators`.
-3. **Legacy `SubStringScorer`** — single substring extracted from `## Success criteria` prose. Logs a deprecation warning; v0.3 removal.
 
 A **refusal short-circuit** wraps each primary scorer — cheap substring detector that fires before the primary, saving the judge call when the agent obviously refuses. Opt out per-atomic with `scoring.refusal: false`.
 

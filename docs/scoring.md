@@ -1,6 +1,6 @@
 # Scoring tiers + evidence
 
-atomic-atlas evaluates each run with a **three-tier scorer stack** and attaches structured **evidence** to every verdict. This page is the authoring guide: how to pick a tier, when to add `judge_guidance` / `judge_examples`, and how to capture extracted artifacts (credentials, file fragments, system-prompt leaks) automatically.
+atomic-atlas evaluates each run with a **two-tier scorer stack** and attaches structured **evidence** to every verdict. This page is the authoring guide: how to pick a tier, when to add `judge_guidance` / `judge_examples`, and how to capture extracted artifacts (credentials, file fragments, system-prompt leaks) automatically.
 
 ## TL;DR
 
@@ -25,15 +25,14 @@ extractors:
 
 That's the 80% case. The rest of this page covers why and the override knobs.
 
-## Why three tiers
+## Why two tiers
 
 | Tier | Scorer | When it runs | Cost |
 |---|---|---|---|
 | 1 | `LLMJudgeScorer` (wraps PyRIT's `SelfAskTrueFalseScorer`) | Default when `OPENAI_API_KEY` is set and `## Success criteria` is non-empty | 1 LLM call per run |
 | 2 | `IndicatorScorer` (any-of-N case-insensitive substring match over `success_indicators`) | Auto-fallback when no judge available; explicit override | Free |
-| 3 | Legacy `SubStringScorer` (single substring from prose) | Only when neither indicators nor judge are available; logs a deprecation warning | Free |
 
-The judge wins by default because substring matching is structurally imprecise on free-text agent responses — paraphrased compliance ("I'll comply now") is invisible to a fixed indicator list. The deterministic tiers stay as fallbacks for offline / no-key environments and for atomics where indicators *are* ground truth (e.g., a literal `sk-...` API key in the response).
+The judge wins by default because substring matching is structurally imprecise on free-text agent responses — paraphrased compliance ("I'll comply now") is invisible to a fixed indicator list. The deterministic indicator tier stays as the fallback for offline / no-key environments and for atomics where indicators *are* ground truth (e.g., a literal `sk-...` API key in the response).
 
 A **refusal short-circuit** wraps every primary scorer. It's a cheap substring detector (`"i can't help"`, `"i won't"`, `"as an ai"`, …) — when it fires the verdict is False without paying for a judge call. Opt out per-atomic with `scoring.refusal: false`.
 
@@ -211,7 +210,7 @@ Substring scoring would have flagged Run 2 either way (the indicators match) but
 ## Common gotchas
 
 - **Empty `## Success criteria`** — the auto path falls back to indicators or legacy substring. Either write the prose or set `scoring.strategy: indicators` explicitly.
-- **Judge cost** — the judge makes one LLM call per run. With 3 runs × 5 atomics that's 15 calls; with `RedTeamingOrchestrator` add the attacker calls on top. Use `scoring.judge_model: gpt-4o-mini` for cheap atomics.
+- **Judge cost** — the judge makes one LLM call per run. With 3 runs × 5 atomics that's 15 calls; with `RedTeamingAttack` add the attacker calls on top. Use `scoring.judge_model: gpt-4o-mini` for cheap atomics.
 - **Variance** — two runs of the same atomic against the same response can produce different judge verdicts. This is well-known LLM-judge behavior. Self-consistency (N=3 majority vote) lands in v0.3 if it becomes a problem.
 - **Regex `.` matches newlines?** — by default no. Patterns are compiled with `re.IGNORECASE | re.MULTILINE` but not `re.DOTALL`. Use `(?s)` inline if you need cross-line matching.
 - **Refusal short-circuit didn't fire** — the cheap detector matches a curated list of phrases (`"i can't help"`, `"as an ai"`, …). Custom-styled refusals like `"[BLOCKED] Security Alert"` won't match; the judge then catches them. The `cheap` substring path is the only mode shipped today; an LLM-driven refusal scorer is a v0.3 candidate.

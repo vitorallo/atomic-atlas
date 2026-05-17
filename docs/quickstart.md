@@ -13,7 +13,7 @@ Goal of this doc: take you from a clean machine to a successful `recon → exec 
 
 - **Python 3.10–3.13** (PyRIT 0.13 does not yet support 3.14). Check with `python3 --version`.
 - **Docker** for running DVAA locally.
-- An **OpenAI API key** (or an OpenAI-compatible proxy) for the attacker LLM that PyRIT's `RedTeamingOrchestrator` uses. Set `OPENAI_API_KEY=...` in your environment.
+- An **OpenAI API key** (or an OpenAI-compatible proxy) for the attacker LLM that PyRIT's `RedTeamingAttack` uses. Set `OPENAI_API_KEY=...` in your environment.
 
 If anything fails during install, see [docs/install.md](install.md) for the install matrix and common-error troubleshooting.
 
@@ -124,7 +124,7 @@ What happens under the hood:
 
 1. The runner loads `atomics/AML.T0051.001/rag_corpus.md` (intent + frontmatter).
 2. `RAGCorpusTarget.setup()` injects the poisoned document into DVAA's ChromaDB.
-3. The `RedTeamingOrchestrator` drives a multi-turn attack against DVAA's chat endpoint, with the attacker LLM mutating the trigger as needed.
+3. The `RedTeamingAttack` drives a multi-turn attack against DVAA's chat endpoint, with the attacker LLM mutating the trigger as needed.
 4. PyRIT's scorer evaluates each run.
 5. `RAGCorpusTarget.cleanup()` removes the injected document.
 6. Results are written to `results.json` (appended if the file exists).
@@ -142,11 +142,10 @@ Results written to results.json
 
 ### Scoring: judge tier with first-class evidence
 
-Each run is scored by an automatic three-tier stack:
+Each run is scored by an automatic two-tier stack:
 
 1. **LLM judge** — when `OPENAI_API_KEY` is set, PyRIT's `SelfAskTrueFalseScorer` reads the response against the atomic's `## Success criteria`. Produces a verdict + natural-language reasoning.
 2. **IndicatorScorer** — any-of-N substring match over `success_indicators`. Auto-fallback when no judge.
-3. **Legacy `SubStringScorer`** — last-resort fallback; logs a deprecation warning.
 
 Every verdict carries a structured **`evidence`** payload — `tier`, `verdict`, `judge_reasoning`, `matched_indicators`, `extracted` (regex artifacts), `duration_ms`. It rides on each `run_details[i]` in `results.json`, gets rendered inline by the markdown reporter, and surfaces in the ATLAS Navigator metadata (`evidence_count` / `top_extracted` per technique).
 

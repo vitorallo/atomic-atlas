@@ -17,7 +17,7 @@ Before executing any other attack, adversaries probe the target model's guardrai
 - Access to the agent's chat interface
 
 ## Attack strategy
-PyRIT `RedTeamingOrchestrator` probes the target to map its behavioral boundaries: what topics it refuses, how it handles persona-switching requests, whether it reveals system prompt fragments. This atomic is primarily a recon technique; success is measured by information gathered, not by a specific agent action.
+PyRIT `RedTeamingAttack` probes the target to map its behavioral boundaries: what topics it refuses, how it handles persona-switching requests, whether it reveals system prompt fragments. This atomic is primarily a recon technique; success is measured by information gathered, not by a specific agent action.
 
 This technique is natively supported by PyRIT and is included here for ATLAS coverage completeness. For systematic guardrail probing, use PyRIT's `PromptSendingOrchestrator` with a curated probe set.
 

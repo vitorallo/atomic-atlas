@@ -157,8 +157,8 @@ Output is templated tightly so the parser can extract the payload deterministica
 
 ## Limits + gotchas
 
-- **DVAA is a phrase-matcher, not a real LLM.** A semantically-correct LLM-generated payload may not hit DVAA's narrow trigger set on the first turn. Use `RedTeamingOrchestrator` orchestration to let the attacker LLM mutate the seed across turns, or use `adapt` against real LLM targets.
+- **DVAA is a phrase-matcher, not a real LLM.** A semantically-correct LLM-generated payload may not hit DVAA's narrow trigger set on the first turn. Use `RedTeamingAttack` orchestration to let the attacker LLM mutate the seed across turns, or use `adapt` against real LLM targets.
 - **Variance is intentional.** Two `adapt` calls with identical inputs may produce different bundles. The `generator_prompt_hash` lets you verify the *inputs* were identical; the LLM's stochasticity is by design.
 - **No automatic atomic backfill.** The adapter does not write back to the atomic's frontmatter (e.g., to add `judge_examples`). Generated artifacts live alongside the atomic, not inside it.
 - **No regeneration loop.** If a payload fails, run `adapt` again with `--observed` updated (now containing the failure evidence). The adapter doesn't auto-retry.
-- **Generator ≠ judge.** `--model` here is the *generator* model. `scoring.judge_model` in the atomic's frontmatter is the *evaluator* model. Different concerns, different flags.
+- **Generator ≠ judge.** `LLM_MODEL` (from `.env`) is the *generator* model. `scoring.judge_model` in the atomic's frontmatter is the *evaluator* model. Different concerns — one is environment config, the other is per-atomic.

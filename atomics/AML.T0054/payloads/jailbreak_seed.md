@@ -1,6 +1,6 @@
 # Jailbreak Seed — AML.T0054 / direct_chat
 
-Seed for `RedTeamingOrchestrator`. Describes attack-shape categories; the attacker LLM generates concrete phrasings at runtime.
+Seed for `RedTeamingAttack`. Describes attack-shape categories; the attacker LLM generates concrete phrasings at runtime.
 
 ## Variant families
 

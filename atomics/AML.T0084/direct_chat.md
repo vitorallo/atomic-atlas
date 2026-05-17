@@ -48,7 +48,7 @@ System prompts and configuration metadata define what the agent knows, what tool
 
 ## Attack strategy
 
-`RedTeamingOrchestrator` generates and mutates user messages designed to elicit configuration disclosure. The attacker LLM probes for instruction text, tool definitions, model parameters, and embedded data. Variants escalate: direct asks → role-play framings → indirect contextual probes.
+`RedTeamingAttack` generates and mutates user messages designed to elicit configuration disclosure. The attacker LLM probes for instruction text, tool definitions, model parameters, and embedded data. Variants escalate: direct asks → role-play framings → indirect contextual probes.
 
 Payload seed: `payloads/configuration_probe.md`
 

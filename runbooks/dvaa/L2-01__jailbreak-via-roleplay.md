@@ -29,7 +29,7 @@ Role-play jailbreaks are the longest-running family of LLM safety bypass: positi
 
 ## Execution
 
-1. **Step 1 — LLM Jailbreak (`AML.T0054 / direct_chat`).** `RedTeamingOrchestrator` mutates role-play / hypothetical-scenario / persona-override variants. The attacker LLM observes refusal patterns and adapts variants across runs.
+1. **Step 1 — LLM Jailbreak (`AML.T0054 / direct_chat`).** `RedTeamingAttack` mutates role-play / hypothetical-scenario / persona-override variants. The attacker LLM observes refusal patterns and adapts variants across runs.
 
 ## Success criteria
 

@@ -16,7 +16,7 @@ docker run -d --name dvaa --rm -p 7001-7008:7001-7008 -p 7010-7013:7010-7013 \
 curl -s http://localhost:7003/health   # LegacyBot — most permissive agent
 ```
 
-For LLM-driven paths (judge tier scoring, `RedTeamingOrchestrator` attacker LLM, `adapt`), set:
+For LLM-driven paths (judge tier scoring, `RedTeamingAttack` attacker LLM, `adapt`), set:
 
 ```bash
 export OPENAI_API_KEY=sk-...

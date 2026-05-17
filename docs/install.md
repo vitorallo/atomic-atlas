@@ -13,7 +13,7 @@ atomic-atlas has a **layered install model**. The base install is small and lets
 
 ## Why PyRIT is optional
 
-PyRIT is the orchestration backbone for `exec`. It generates and mutates payloads (via `RedTeamingOrchestrator`), drives multi-turn attacks, and scores responses. atomic-atlas extends PyRIT with `PromptTarget` subclasses for the agentic vectors PyRIT does not cover natively (RAG injection, MCP tool poisoning, tool response interception, document upload, webhook).
+PyRIT is the orchestration backbone for `exec`. It generates and mutates payloads (via `RedTeamingAttack`), drives multi-turn attacks, and scores responses. atomic-atlas extends PyRIT with `PromptTarget` subclasses for the agentic vectors PyRIT does not cover natively (RAG injection, MCP tool poisoning, tool response interception, document upload, webhook).
 
 But PyRIT is **heavy**. Its transitive dependencies include `azure-ai-*`, `openai`, `anthropic`, `chromadb`, `accelerate`, `transformers`, and more — easily 1+ GB of installs. If you only want to:
 

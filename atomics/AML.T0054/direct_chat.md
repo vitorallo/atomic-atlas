@@ -32,7 +32,7 @@ Jailbreak attacks bypass the model's safety training to elicit behavior the oper
 
 ## Attack strategy
 
-`RedTeamingOrchestrator` mutates a base jailbreak prompt across runs. Variant families include role-play framings, hypothetical-scenario framings, system-prompt-impersonation, and instruction-priority claims. The attacker LLM observes the agent's refusal patterns and adapts.
+`RedTeamingAttack` mutates a base jailbreak prompt across runs. Variant families include role-play framings, hypothetical-scenario framings, system-prompt-impersonation, and instruction-priority claims. The attacker LLM observes the agent's refusal patterns and adapts.
 
 Payload seed: `payloads/jailbreak_seed.md`
 
