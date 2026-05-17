@@ -78,7 +78,18 @@ def read_atomic(path: str) -> dict[str, Any]:
     ``AML.T0051.001/rag_corpus.md``). Returns frontmatter fields plus the
     parsed body sections keyed by H2 heading.
     """
-    full_path = ATOMICS_DIR / path
+    # Containment: `path` arrives from an MCP tool call (untrusted — the
+    # caller may be an LLM agent driven by poisoned content). Resolve and
+    # assert the target stays inside the catalog so it can't escape to
+    # arbitrary files (e.g. "../../../../etc/passwd" or an absolute path).
+    root = ATOMICS_DIR.resolve()
+    full_path = (root / path).resolve()
+    try:
+        full_path.relative_to(root)
+    except ValueError:
+        raise ValueError(
+            f"path must be inside the atomics/ catalog (got {path!r})"
+        )
     atomic = load(full_path)
     return {
         "atlas_technique": atomic.atlas_technique,
