@@ -4,7 +4,7 @@
 **Date**: 2026-05-17
 **Author**: Vito Rallo, Cybersecurity Consult Partner · Benelux · Kyndryl
 **Status**: Active development
-**Canonical companions**: [`SPEC.md`](SPEC.md) (atomic format), [`README.md`](README.md) (install + quickstart)
+**Companions**: [`SPEC.md`](SPEC.md) (atomic format), [`README.md`](README.md) (install + quickstart)
 
 ---
 
@@ -20,11 +20,11 @@ MITRE ATT&CK had a rich taxonomy and almost no runnable test coverage until Red 
 
 Every "ATLAS-aligned" security claim today is **unfalsifiable**. A team that says "we cover indirect prompt injection (AML.T0051.001)" has no mechanical way to prove it. Three concrete gaps cause this.
 
-### Problem 1 — Coverage is tactic-level, not technique-level
+### Problem 1 — Coverage is tactic-mapped, not technique-keyed
 
-The most-cited ATLAS-aligned open-source tool, **Promptfoo**, maps **39 generic red-team plugins to 14 of ATLAS's 16 tactics**. It references **zero** ATLAS technique IDs, covers **0 of the 2 AI-native tactics** (AI Model Access, AI Attack Staging) in its primary mapping, and ships no technique-keyed atomic tests. Tactic-level mapping answers "are we roughly in this area"; it cannot answer "does technique AML.T0083 actually work against *this* agent."
+The most-cited ATLAS-aligned open-source tool, **Promptfoo** (now part of OpenAI), exposes ATLAS as a **tactic-level preset**: its adversarial-input plugins/strategies *generate* tests per target that roll up to ATLAS tactics, with untouched tactics — including the AI-native **AI Model Access** — left as explicit coverage gaps. Its docs cite a handful of technique IDs illustratively, but there is no contributor-curated, technique-keyed *atomic* catalog and no model of *how the attack is delivered*. Tactic mapping answers "are we roughly in this area"; it cannot answer "does AML.T0083 work against *this* agent, delivered via RAG vs MCP vs tool-response." We want the latter.
 
-*(Source: `working/promptfoo` `src/redteam/constants/frameworks.ts`, retrieved 2026-05-07.)*
+*(Sources: Promptfoo `mitre:atlas` docs + `working/promptfoo` checkout, retrieved 2026-05-17.)*
 
 ### Problem 2 — Same technique, different door
 
@@ -167,7 +167,7 @@ A skill reads atomic intent, inspects the target, and reasons about delivery for
 | Distinct ATLAS techniques with an atomic | ≥ 9 | **19** |
 | High-confidence agentic coverage | n/a | **12 / 29 (41%)** · 15/51 incl. probable |
 | Canonical entry vectors with ≥ 1 atomic | ≥ 5 | **7 / 12** |
-| Frontmatter validation failures | 0 | **0** (36 atomics + 22 runbooks) |
+| Frontmatter validation failures | 0 | **0** (27 atomics + 22 runbooks) |
 | Test suite | 100% | **165 passed, 1 skipped** |
 | DVAA challenges mapped to runbooks | n/a | **22 / 22** |
 | ATLAS tactics traversed by runbooks | n/a | **9 / 16** |
@@ -181,7 +181,8 @@ A skill reads atomic intent, inspects the target, and reasons about delivery for
 ## Open questions
 
 1. **PyPI name** — `atomic-atlas` available; confirm before v0.3.
-2. **MITRE coordination** — notify the ATLAS team once v0.1 is public? Could strengthen legitimacy and drive Arsenal collaboration.
-3. **DVAA dependency** — DVAA must expose a ChromaDB-compatible RAG endpoint for the flagship demo; confirm before the keynote.
+2. **MITRE coordination** — notify the ATLAS team once v0.1 is public, could strengthen legitimacy and drive Arsenal collaboration. This should happen in May 2026.
+3. **DVAA dependency** — DVAA must expose a ChromaDB-compatible RAG endpoint for the flagship demo to include this use case (TO CONFIRM)
 4. **MCP tool-registry format** — no standard yet for registering tools to an MCP server over HTTP; `MCPServerTarget` uses a placeholder pending a real implementation.
-5. **Agentic-set definition** — adopt `29 high-confidence` as the canonical coverage denominator (vs `51` incl. probable)? The deck and PRD now both use 29; confirm this is the number we defend publicly.
+5. **Agentic-set definition** — adopt `29 high-confidence` as the canonical coverage denominator (vs `51` incl. probable)? The deck and PRD now both use 29; we confirmed these numbers by grepping over the project but we didn't run a manual 1-to-1 verfication, so still consider numbers an approximation and the need to confirm.
+6. **Positioning vs an OpenAI-owned Promptfoo** — Promptfoo is now part of OpenAI and moving fast. This *strengthens* the case for an open, vendor-neutral, ATLAS-canonical commons rather than weakening it: the differentiator is the authored technique-keyed catalog + `technique × delivery-vector` matrix, not raw coverage breadth. Decide how explicitly to state "complementary, not competing" in public materials.

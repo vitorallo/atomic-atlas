@@ -27,7 +27,7 @@ Nothing in the sample is synthetic — it is the exact output of one `recon → 
 
 ## What it is
 
-A library of small, self-contained adversarial tests, each mapped to an ATLAS technique ID and an entry vector. Backed by [PyRIT](https://github.com/Azure/PyRIT) for payload generation and attack orchestration. Adds what PyRIT doesn't have: agentic delivery targets for the 11 non-chat entry vectors (RAG injection, MCP tool poisoning, tool response interception, document upload, webhook, email, A2A, computer-use).
+A library of small, self-contained adversarial tests, each mapped to an ATLAS technique ID and an entry vector. Backed by [PyRIT](https://github.com/Azure/PyRIT) for payload generation and attack orchestration. Adds what PyRIT doesn't have: agentic delivery targets for the non-chat entry vectors (RAG injection, MCP tool poisoning, tool response interception, document upload, webhook, email, A2A, computer-use).
 
 The format is Markdown with YAML frontmatter — one `.md` file per `(technique × vector)` cell. File path encodes both dimensions:
 
@@ -63,17 +63,17 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 ---
 
-## Current status
-
-**165 tests passing, 1 skipped.** v0.1 is keynote-ready; v0.2 is largely shipped.
+## Additional info
 
 > **About DVAA in this repo.** Most examples target [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), a vulnerability simulator with scripted phrase-matched responses. It's the right harness to verify the runner mechanically, but it does not behave like a real LLM agent — single-shot LLM-generated payloads may not hit DVAA's narrow trigger set. For LLM-behavior validation, use Lobster (planned for v0.4; see [openspec/changes/vulnerable-agent](openspec/changes/vulnerable-agent)) or a real target you control.
 
-### Across all OpenSpec changes
+### Across all OpenSpec changes, current status
+
+This project uses AI spec-driven development (it's not vibe coded).
 
 | Spec | Status | Notes |
 |---|---|---|
-| **atomic-format** | ✅ Shipped | Atomic markdown schema + parser. 36 atomics, 19 ATLAS techniques (12/29 high-confidence agentic). |
+| **atomic-format** | ✅ Shipped | Atomic markdown schema + parser. 27 atomics, 19 ATLAS techniques (12/29 high-confidence agentic). |
 | **agentic-targets** | ✅ Mostly shipped | 6 adapters live (`direct_chat`, `rag_corpus`, `mcp_server`, `tool_response`, `document_upload`, `webhook`). Missing: A2A, web_fetch, email, computer_use, model_api. |
 | **agent-runner** | ✅ Shipped | Claude Code skill + MCP server (`atomic-atlas-mcp`). |
 | **cli-and-reporting** | ✅ Shipped | `recon`, `list`, `validate`, `exec`, `report`, `runbook`, `adapt`. Reporters: navigator, coverage, markdown. |
@@ -86,28 +86,28 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 ### PRD milestones
 
-- **v0.1 — Keynote-ready**: 14/16 ✅. Open: git tag `v0.1.0`, live keynote dry-run.
+- **v0.1 — Keynote-ready**: 14/16 ✅. Open: git tag `v0.1.0`, live keynote presented at MITRE ATTACK 2026 workshop in Brussels.
 - **v0.2 — Scoring, adaptation, engagement memory**: scoring tiers + `adapt` + engagement/Findings shipped. Open: A2A target, canonical kill-chain + engagement-template runbooks, catalog expansion toward the remaining high-confidence agentic techniques (12/29 covered), cost telemetry, runbook reporters.
 - **v0.3 — Community pipeline**: not started. CI, PyPI, Pinecone adapter, sibling vulnerable agents.
-- **v0.4 — The agent that tests the agent**: web/email/computer-use targets (12/12 vectors), generic-agent skill, Lobster vulnerable LangGraph agent.
+- **v0.4 — The agent that tests the agent**: web/email/computer-use targets (12/12 vectors), generic-agent skill, Lobster vulnerable LangGraph agent (concepts only)
 
 ### What's next — ranked by leverage
 
 **Tier 1 — high leverage, demonstrably-relevant to the keynote:**
 
-1. **Lobster (vulnerable-agent)** — real LLM target. DVAA is a phrase-matcher, not an LLM, so it can't truly evaluate adapter-generated payloads. A real LangGraph agent with ATLAS-tagged failures would prove the architecture against actual LLM behavior. ~1-2 days.
-2. **Canonical kill-chain runbooks** under `runbooks/kill-chains/` — `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`. Strongest demo material for the keynote. ~half-day each.
-3. **Live keynote dry-run** — rehearse the full deck against DVAA + Lobster end-to-end. The architecture is verified piece by piece but the talk pacing isn't.
+1. **Lobster (vulnerable-agent)** — real LLM target. DVAA is a phrase-matcher, not an LLM, so it can't truly evaluate adapter-generated payloads. A real LangGraph agent with ATLAS-tagged failures would prove the architecture against actual LLM behavior.
+2. **Canonical kill-chain runbooks** under `runbooks/kill-chains/` — `indirect-pi-to-tool-exfil` (T0051.001 → T0053 → T0086), `rag-poison-to-cred-harvest`, `mcp-tool-poison-to-c2`. Strongest demo material for the keynote.
+3. **Live keynote dry-run** — rehearse the full deck against DVAA + Lobster end-to-end. The idea is to go live demo.
 
 **Tier 2 — fills demonstrable gaps:**
 
-4. **A2ATarget** — unblocks `RB-DVAA-L4-02` (3 a2a_message atomics already shipped, no executor). Agent-to-agent attack story is one of the Five Dimensions. ~half-day.
-5. **Backfill atomics that still rely on the judge tier alone with `success_indicators` / `judge_guidance`** — gives the indicator tier something to fall back to when no judge LLM is reachable. ~1 day.
+1. **A2ATarget** — unblocks `RB-DVAA-L4-02` (3 a2a_message atomics already shipped, no executor). Agent-to-agent attack story is one of the Five Dimensions.
+2. **Backfill atomics that still rely on the judge tier alone with `success_indicators` / `judge_guidance`** — gives the indicator tier something to fall back to when no judge LLM is reachable.
 
 **Tier 3 — debt + polish:**
 
-6. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical).
-7. `atomic-atlas init-profile` — CLI generator from recon output (operator UX).
+6. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical fix).
+7. `atomic-atlas init-profile` — CLI generator from recon output (operator UX, still to define how).
 8. Cost estimation before exec; `last_verified_date` field + model-drift CI.
 
 ---
@@ -164,11 +164,13 @@ A layer **above** the CLI. The CLI is the deterministic primitive; the agent rea
 
 See **[docs/agent-runner.md](docs/agent-runner.md)** for the full surface, fallback rules, and MCP client config.
 
+The agent and the skills are still under active development, this is very experimental yet.
+
 ---
 
 ## Seed atomics (original v0.1 priority set)
 
-The 9 priority techniques the catalog started from. It has since grown to **36 atomics across 19 ATLAS techniques** — run `atomic-atlas report --format coverage` for the live matrix.
+The 9 priority techniques the catalog started from. It has since grown to **27 atomics across 19 ATLAS techniques** — run `atomic-atlas report --format coverage` for the live matrix.
 
 | Technique | Vector(s) |
 |---|---|
@@ -213,4 +215,4 @@ The goal: a coverage commons for AI security teams, so "ATLAS-aligned" becomes a
 - [PyRIT](https://github.com/Azure/PyRIT) — the orchestration backbone this project extends
 - [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent) — the recommended test target
 - [MITRE Arsenal](https://github.com/mitre-atlas/arsenal) — predecessor (stale, no agentic coverage)
-- [Promptfoo ATLAS plugin](https://www.promptfoo.dev/docs/red-team/mitre-atlas/) — tactic-level only: 39 generic plugins → 14/16 ATLAS tactics, 0/2 AI-native tactics, 0 techniques by ID; no entry-vector dimension
+- [Promptfoo MITRE ATLAS](https://www.promptfoo.dev/docs/red-team/mitre-atlas/) — now part of OpenAI; maps generated plugin tests onto an ATLAS *tactic* preset (AI Model Access an explicit gap), not a technique-keyed atomic catalog and no delivery-vector dimension — complementary, not competing
