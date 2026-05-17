@@ -18,7 +18,7 @@ atomic-atlas fills that gap.
 |---|---|
 | 🎤 **Project overview — slides (PDF)** | [docs/AtomicAtlas_v0.4pre.pdf](docs/AtomicAtlas_v0.4pre.pdf) — the *why*: the ATLAS coverage gap, the delivery-vector and payload-portability problems, and how atomic-atlas closes them |
 | 📄 **Sample assessment, explained (PDF)** | [docs/sample_assessment1/sample_assessment_explained.pdf](docs/sample_assessment1/sample_assessment_explained.pdf) — a real, live engagement against DVAA LegacyBot, end to end, ending in a **VULNERABLE / HIGH** finding with extracted credentials |
-| 📝 **Step-by-step walkthrough** | [docs/sample_execution.md](docs/sample_execution.md) — every command + output |
+| 📝 **Step-by-step walkthrough** | [docs/sample_assessment1/sample_execution.md](docs/sample_assessment1/sample_execution.md) — every command + output |
 | 📦 **Raw artifacts (committed verbatim)** | [docs/sample_assessment1/](docs/sample_assessment1/) — `results.jsonl`, findings / navigator / coverage / run reports, recon ([file map](docs/sample_assessment1/README.md)) |
 
 Nothing in the sample is synthetic — it is the exact output of one `recon → exec → report` run.
@@ -47,19 +47,38 @@ atomics/AML.T0051.001/rag_corpus.md   ← technique + vector
 pip install 'atomic-atlas[orchestrator]'
 
 atomic-atlas list                                              # browse the catalog
-atomic-atlas recon --target http://localhost:8080              # fingerprint a target
-atomic-atlas exec AML.T0051.001/rag_corpus \
-  --target http://localhost:8080 \
-  --profile targets/dvaa_local.yaml \
+atomic-atlas recon --target http://localhost:7003/v1           # fingerprint a target (DVAA LegacyBot)
+atomic-atlas exec AML.T0083/direct_chat \
+  --target http://localhost:7003/v1 \
+  --profile targets/dvaa_legacybot.yaml \
   --authorized                                                 # run the flagship atomic
                                                                # (appends to ./atomic-atlas-engagement/)
 atomic-atlas report --format findings                          # stakeholder verdict + evidence
 atomic-atlas report --format navigator                         # ATLAS Navigator layer JSON
 ```
 
-> **Authorization required.** Running these tests against systems you do not own or have written permission to test is unethical and likely illegal. The `--authorized` flag is your confirmation.
+> **Authorization required.** Running these tests against systems you do not own or have written permission to test is unethical and likely illegal. The `--authorized` flag is your confirmation. This is a dual-use offensive tool — see **[DISCLAIMER.md](DISCLAIMER.md)** for acceptable use and the no-responsibility-for-misuse notice.
 
 For the full walkthrough — installing, bringing up [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), running the demo end-to-end, opening the result in ATLAS Navigator — see **[docs/quickstart.md](docs/quickstart.md)**.
+
+---
+
+## On the PyRIT dependency
+
+atomic-atlas is a **[PyRIT](https://github.com/Azure/PyRIT) extension, not a re-implementation.** Microsoft PyRIT owns the orchestration backbone of `atomic-atlas exec` — the multi-turn attacker-LLM mutation loop, the scoring graph, and conversation memory. atomic-atlas adds what PyRIT doesn't have: the 12 agentic delivery vectors, ATLAS technique keying, the two-tier scorer + Evidence, the `adapt` payload generator, and the engagement/Finding layer.
+
+**PyRIT is an optional extra.** Only `exec` needs it:
+
+| Install | PyRIT? | What runs |
+|---|---|---|
+| `pip install atomic-atlas` | no | `list` · `recon` · `report` · `validate` · MCP server |
+| `pip install 'atomic-atlas[orchestrator]'` | yes | the above **+ `exec`** |
+
+Every `pyrit` import is lazy, so the base install stays ~1 GB lighter and authoring/CI never pull it in.
+
+> **Version caveat.** The code targets PyRIT **0.13.x** and requires **Python 3.10–3.13** (PyRIT does not support 3.14 — a venv on 3.14 cannot install it). The declared pin (`pyrit>=0.5.0`) is looser than the code actually needs; treat **`pyrit>=0.13,<0.14`** as the real supported range.
+
+Full details — every symbol consumed, the integration seam, what we deliberately don't take — in **[docs/pyrit.md](docs/pyrit.md)**.
 
 ---
 
@@ -117,12 +136,11 @@ This project uses AI spec-driven development (it's not vibe coded).
 | Doc | What it covers |
 |---|---|
 | [docs/quickstart.md](docs/quickstart.md) | End-to-end: install, bring up DVAA, recon → exec → report; runbook exec; `--hitl` interactive review; `adapt` → `exec --payload-file` chain |
-| [docs/sample_execution.md](docs/sample_execution.md) | Verbatim walkthrough of one real live run (DVAA LegacyBot, `AML.T0083`): every command + output, why multi-turn exec takes minutes, how to read the VULNERABLE/HIGH finding |
+| [docs/sample_assessment1/sample_execution.md](docs/sample_assessment1/sample_execution.md) | Verbatim walkthrough of one real live run (DVAA LegacyBot, `AML.T0083`): every command + output, why multi-turn exec takes minutes, how to read the VULNERABLE/HIGH finding — committed artifacts in [docs/sample_assessment1/](docs/sample_assessment1/) |
 | [docs/use-cases.md](docs/use-cases.md) | Three end-to-end walkthroughs: smoke a single technique, chained kill chain with `adapt`, full engagement runbook |
 | [docs/benchmarks.md](docs/benchmarks.md) | 12 live runs across 6 DVAA bots — same response, three judge verdicts; runtime as fitness signal; reproducible commands |
 | [docs/cli-reference.md](docs/cli-reference.md) | Per-subcommand reference: every flag with copy-pasteable examples |
 | [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
-| [docs/sample_execution.md](docs/sample_execution.md) | Verbatim real end-to-end run (recon → exec → findings) against DVAA LegacyBot; committed artifacts in [docs/sample_assessment1/](docs/sample_assessment1/) |
 | [docs/adapt.md](docs/adapt.md) | Payload adapter: bundle format, prompt structure, observed-evidence selection rules, audit trail |
 | [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
 | [docs/pyrit.md](docs/pyrit.md) | How atomic-atlas uses PyRIT: why the dependency, exact symbols consumed (target/attack/scorer/memory), what we deliberately don't take, version caveat, the integration seam |
@@ -195,7 +213,8 @@ One PR = one atomic. The format is simple:
 3. Fill in the frontmatter and body sections
 4. Add any payload seed files to `payloads/`
 5. Run `atomic-atlas validate` to check the frontmatter
-6. Open a PR
+6. Run `python scripts/generate_index.py` to refresh the `index.yaml` catalog
+7. Open a PR
 
 See [SPEC.md](SPEC.md) for the full format specification.
 

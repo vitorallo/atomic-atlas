@@ -117,7 +117,7 @@ Single-atomic runbooks: 14. Multi-atomic chains: 8 (≥ 2 steps).
 
 ## Runbook execution status
 
-22 / 22 runbooks pass `atomic-atlas runbook validate`. Live `atomic-atlas runbook exec` is operational against any target whose vectors have a CLI adapter (currently: `direct_chat`, `rag_corpus`, `document_upload`, `tool_response`, `mcp_server`, `webhook`). Runbooks referencing `a2a_message` (L4-02) require the v0.2 `A2ATarget` adapter; the agent runner skill provides a workaround for now.
+22 / 22 runbooks pass `atomic-atlas validate` (top-level `validate` auto-detects atomics vs runbooks). Live `atomic-atlas runbook exec` is operational against any target whose vectors have a CLI adapter (currently: `direct_chat`, `rag_corpus`, `document_upload`, `tool_response`, `mcp_server`, `webhook`). Runbooks referencing `a2a_message` (L4-02) require the `A2ATarget` adapter (not yet shipped); the agent runner skill provides a workaround for now.
 
 ## How this catalog grows
 
@@ -127,7 +127,7 @@ When a new DVAA release adds a challenge:
 2. Decide ATLAS mapping (use real ID if it fits; `UNCLASSIFIED.<slug>` otherwise).
 3. Write any missing atomics under `atomics/AML.TXXXX/<vector>.md` (or `atomics/unclassified/<slug>/<vector>.md`).
 4. Write the runbook under `runbooks/dvaa/<id>__<slug>.md` referencing those atomics.
-5. Validate: `atomic-atlas validate` (atomics) + `atomic-atlas runbook validate` (runbook refs).
+5. Validate: `atomic-atlas validate` — one pass checks both atomics and runbook refs.
 
 When MITRE ATLAS publishes a technique that fits a previously-`UNCLASSIFIED` mapping (e.g., for self-replicating memory), retag the relevant atomic and update the row.
 

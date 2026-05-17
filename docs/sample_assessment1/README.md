@@ -3,7 +3,7 @@
 A **real** atomic-atlas engagement captured live against a local DVAA
 LegacyBot, committed verbatim so you can see actual output without running
 anything. Nothing here is synthetic. The walkthrough is
-[`docs/sample_execution.md`](../sample_execution.md).
+[`docs/sample_assessment1/sample_execution.md`](sample_execution.md).
 
 | File | What it is |
 |---|---|

@@ -17,7 +17,7 @@ from AI Agent Configuration).
 built on Python 3.14 *cannot* install PyRIT — every version is filtered out and
 `pip install -e '.[orchestrator]'` fails with
 `No matching distribution found for pyrit`. This is the single most common
-setup trap (see [`docs/pyrit.md §3`](pyrit.md)).
+setup trap (see [`docs/pyrit.md §3`](../pyrit.md)).
 
 ```bash
 # Build the venv on a supported interpreter (3.10–3.13), then install:
@@ -217,11 +217,11 @@ unchanged.
 
 The committed artifacts from this exact run — `results.jsonl`, the findings /
 markdown / navigator / coverage reports, and the recon capture — are in
-[`docs/sample_assessment1/`](sample_assessment1/) (see its
-[`README.md`](sample_assessment1/README.md) for the file map).
+[`docs/sample_assessment1/`](../sample_assessment1/) (see its
+[`README.md`](README.md) for the file map).
 
 ---
 
-*See also: [`docs/quickstart.md`](quickstart.md) (first-run walkthrough),
-[`docs/pyrit.md`](pyrit.md) (why the Python version matters),
-[`docs/scoring.md`](scoring.md) (verdict/severity derivation + Evidence schema).*
+*See also: [`docs/quickstart.md`](../quickstart.md) (first-run walkthrough),
+[`docs/pyrit.md`](../pyrit.md) (why the Python version matters),
+[`docs/scoring.md`](../scoring.md) (verdict/severity derivation + Evidence schema).*

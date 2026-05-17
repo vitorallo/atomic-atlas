@@ -1,4 +1,4 @@
-# How atomic-atlas uses PyRIT
+# Atomic-Atlas uses PyRIT
 
 atomic-atlas is a **PyRIT extension, not a re-implementation**. Microsoft
 [PyRIT](https://github.com/Azure/PyRIT) is the orchestration backbone for
@@ -26,9 +26,7 @@ what* we call, and *what we deliberately don't take from it*.
 PyRIT already does all four well, for HTTP/chat targets. Re-implementing them
 would be wasted effort and would diverge from a tool the AI-red-team community
 already trusts. So atomic-atlas plugs into PyRIT at four seams and adds the
-**agentic delivery dimension PyRIT lacks**: a poisoned RAG document, an MCP tool
-registration, an intercepted tool response, an uploaded file, an inbound
-webhook — none of which PyRIT models natively.
+**agentic delivery dimension PyRIT lacks**: a poisoned RAG document, an MCP tool registration, an intercepted tool response, an uploaded file, an inbound webhook — none of which PyRIT models natively.
 
 The design principle (see [`SPEC.md`](../SPEC.md)): **intent over
 implementation**. The atomic describes *what* the attack does; PyRIT + our
@@ -120,14 +118,12 @@ Every symbol atomic-atlas imports from PyRIT, why, and where:
 ## 5. What we deliberately do **not** take from PyRIT
 
 - **PyRIT's datasets / built-in prompt catalog** — atomic-atlas's catalog is the
-  filesystem (`atomics/<ATLAS-id>/<vector>.md`); the atomic *is* the source of
-  truth.
-- **PyRIT's broader orchestrator zoo** — only the two attack classes above are
-  used. Everything else (technique keying, the 12-vector taxonomy, the
+  filesystem (`atomics/<ATLAS-id>/<vector>.md`); the atomic *is* the source of truth.
+- **PyRIT's broader orchestrator zoo** — only the two attack classes above are used. Everything else (technique keying, the 12-vector taxonomy, the
   two-tier scorer + Evidence, `adapt`, engagement memory, Findings, Navigator
   output) is atomic-atlas's own layer on top.
-- **PyRIT's scoring verdict as the final word** — PyRIT's judge is one of three
-  tiers (judge → indicators → deterministic substring). The tier actually used
+- **PyRIT's scoring verdict as the final word** — PyRIT's judge is one of two
+  tiers (judge → deterministic indicators). The tier actually used
   is recorded in `Evidence`; there is no silent downgrade. See
   [`docs/scoring.md`](scoring.md).
 

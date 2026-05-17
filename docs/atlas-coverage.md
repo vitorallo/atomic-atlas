@@ -1,6 +1,6 @@
 # ATLAS coverage
 
-Project-wide stats for atomic-atlas's coverage of MITRE ATLAS v5.6.0. Updated 2026-05-06.
+Project-wide stats for atomic-atlas's coverage of MITRE ATLAS v5.6.0. Updated 2026-05-17.
 
 ## Headline numbers
 
@@ -14,8 +14,8 @@ Project-wide stats for atomic-atlas's coverage of MITRE ATLAS v5.6.0. Updated 20
 | Distinct ATLAS techniques covered by atomics | **19** |
 | `UNCLASSIFIED.<slug>` atomics | **1** |
 | ATLAS tactics traversed by runbooks | **9 of 16** |
-| Coverage of high-confidence agentic ATLAS techniques | **19 / 29 = 66%** |
-| Coverage of all agentic-relevant ATLAS techniques | **19 / 51 = 37%** |
+| Coverage of high-confidence agentic ATLAS techniques | **12 / 29 = 41%** |
+| Coverage of all agentic-relevant ATLAS techniques | **15 / 51 = 29%** |
 
 The "high-confidence agentic" denominator is what most practitioner-facing claims should use — those are the 29 techniques in ATLAS v5.6.0 that are explicitly about agent behavior (RAG, MCP, tool use, memory, A2A, agent configuration). The "all agentic-relevant" denominator (51) includes 22 techniques that touch agents only tangentially (jailbreak, drive-by, sandbox-escape applied to agent contexts).
 
@@ -94,9 +94,9 @@ ATLAS v5.6.0 has 16 tactics. atomic-atlas's runbooks traverse **9** of them.
 | Exfiltration | 3 (T0086 × 2, T0097) | 5 | ✅ Strong coverage |
 | Impact | 1 (T0112) | 4 | ✅ |
 
-## Gaps in v0.2 scope
+## Coverage gaps
 
-Tracked in `openspec/changes/atlas-agentic-coverage/specs.md`. The 17 ATLAS-v5.6.0 techniques flagged for v0.2 expansion (not yet seeded in v0.1):
+Tracked in `openspec/changes/atlas-agentic-coverage/specs.md`. The 17 ATLAS-v5.6.0 techniques flagged for catalog expansion (not yet seeded):
 
 **Reconnaissance / Discovery layer:** T0002.002, T0064, T0084.001  
 **Resource Development:** T0010.005, T0066  

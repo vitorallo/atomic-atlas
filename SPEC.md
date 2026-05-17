@@ -173,7 +173,8 @@ Supported auth schemes:
 4. Write the body sections
 5. Add any payload seed files to `payloads/`
 6. Run `atomic-atlas validate atomics/AML.TXXXX/your_vector.md` to check frontmatter
-7. Open a PR — one atomic per PR
+7. Run `python scripts/generate_index.py` to refresh the `index.yaml` catalog (CI enforces freshness via `--check`)
+8. Open a PR — one atomic per PR
 
 ---
 
@@ -240,3 +241,6 @@ Authoring details, override knobs, and worked examples in [`docs/scoring.md`](do
 - **Runs, not pass/fail.** An atomic reports a success rate over N runs, not a binary result. LLMs are non-deterministic; coverage claims should reflect that.
 - **Authorization is mandatory.** The runner requires an explicit `--authorized` flag per target execution. Running atomics against systems you do not have authorization to test is unethical and likely illegal.
 - **PyRIT is an optional runtime dependency.** The base install (`pip install atomic-atlas`) supports `list`, `recon`, `report`, `validate`, and the MCP server stub — none of which require PyRIT. Only `atomic-atlas exec` needs PyRIT, which is installed via the `[orchestrator]` extra: `pip install 'atomic-atlas[orchestrator]'`. This keeps atomic authoring and the agent-runner layer lightweight; PyRIT and its transitive deps are pulled in only when actually executing tests.
+
+## Final notices
+This document is AI friendly.

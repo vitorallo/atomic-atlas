@@ -52,7 +52,7 @@ This change delivers PRD v0.2 (coverage breadth) and v0.3 (community pipeline).
 - [ ] EmailTarget implementation
 
 ## v0.3 — Coverage tooling
-- [ ] Auto-generate index.yaml from atomics directory
+- [x] Auto-generate index.yaml from atomics directory (`scripts/generate_index.py`, `--check` for CI)
 - [ ] Coverage badge in README (% of agentic techniques covered)
 - [ ] GitHub Actions: validate new atomics on PR
 - [ ] Coverage diff in PR description (which cells were added)

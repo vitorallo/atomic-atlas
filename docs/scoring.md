@@ -144,7 +144,7 @@ Every score emits a structured `Evidence` payload through PyRIT's `Score.score_m
 ```python
 @dataclass
 class Evidence:
-    tier: str                              # "judge" | "indicators" | "substring" | "composite" | "refusal_short_circuit"
+    tier: str                              # "judge" | "indicators" | "refusal_short_circuit"
     verdict: bool
     matched_against: str                   # response excerpt (≤ 1000 chars)
     attack_input: str                      # the objective / prompt that produced the response
@@ -205,7 +205,7 @@ Substring scoring would have flagged Run 2 either way (the indicators match) but
 
 ## Lessons from Promptfoo, in case you want the lineage
 
-`graderGuidance` → `judge_guidance`. `graderExamples` → `judge_examples`. `assert-set` → `scoring.strategy: composite`. `isBasicRefusal()` → `_CheapRefusalDetector`. We did **not** adopt: multi-judge majority voting (deferred to v0.3), hosted grading backend (operator owns the LLM call), weighted multi-objective scoring (atomics are single-objective).
+`graderGuidance` → `judge_guidance`. `graderExamples` → `judge_examples`. `isBasicRefusal()` → `_CheapRefusalDetector`. We did **not** adopt: multi-judge majority voting (deferred to v0.3), hosted grading backend (operator owns the LLM call), weighted multi-objective scoring / `assert-set` (atomics are single-objective; the `composite` strategy was prototyped and dropped in v0.2).
 
 ## Common gotchas
 
