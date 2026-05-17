@@ -1,0 +1,3 @@
+# pyrit-dataset-leverage
+
+Decision record for the recurring question "we don't use PyRIT's datasets — is there anything in them we should mine to author new ATLAS-keyed atomics?" Finding: PyRIT's bundled datasets are overwhelmingly generic-jailbreak + harmful-content corpora (OWASP-LLM / model-safety), with **essentially nothing for the 17 uncovered high-confidence *agentic* ATLAS techniques** that are atomic-atlas's actual gap. Narrow on-thesis value (jailbreak/injection *shape taxonomy* to deepen already-covered T0054/T0051.x/T0065 cells) exists but is depth, not breadth. Records the **describe + cite, no copy** principle and the PyRIT/atomic-atlas licensing posture. **Status: Proposed — decision-only, no implementation in this change.**
