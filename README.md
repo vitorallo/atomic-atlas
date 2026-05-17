@@ -12,13 +12,12 @@ atomic-atlas fills that gap.
 
 ---
 
-## 📄 See a real assessment
-
-**→ [Sample assessment, explained (PDF)](docs/sample_assessment1/sample_assessment_explained.pdf)** — a real, live engagement against DVAA LegacyBot, walked through end to end: what ran, why a multi-turn run takes minutes, and how to read the resulting **VULNERABLE / HIGH** finding with extracted credentials.
+## 📄 Start here
 
 | | |
 |---|---|
-| 📄 **Explainer PDF** | [docs/sample_assessment1/sample_assessment_explained.pdf](docs/sample_assessment1/sample_assessment_explained.pdf) |
+| 🎤 **Project overview — slides (PDF)** | [docs/AtomicAtlas_v0.4pre.pdf](docs/AtomicAtlas_v0.4pre.pdf) — the *why*: the ATLAS coverage gap, the delivery-vector and payload-portability problems, and how atomic-atlas closes them |
+| 📄 **Sample assessment, explained (PDF)** | [docs/sample_assessment1/sample_assessment_explained.pdf](docs/sample_assessment1/sample_assessment_explained.pdf) — a real, live engagement against DVAA LegacyBot, end to end, ending in a **VULNERABLE / HIGH** finding with extracted credentials |
 | 📝 **Step-by-step walkthrough** | [docs/sample_execution.md](docs/sample_execution.md) — every command + output |
 | 📦 **Raw artifacts (committed verbatim)** | [docs/sample_assessment1/](docs/sample_assessment1/) — `results.jsonl`, findings / navigator / coverage / run reports, recon ([file map](docs/sample_assessment1/README.md)) |
 
