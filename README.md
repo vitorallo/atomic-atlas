@@ -4,7 +4,7 @@
 
 ---
 
-MITRE ATLAS has 167 techniques and 57 case studies. The most important ones — the 21 agent-specific techniques added in the last 12 months — have zero public runnable tests.
+MITRE ATLAS v5.6.0 has 170 techniques and 57 case studies. The 29 high-confidence agentic techniques (51 including probable) have almost zero public runnable tests.
 
 Without runnable tests, every "ATLAS-aligned" product claim is unverifiable. Vendors and security teams alike say "we cover X" with no mechanical way to check. This is the same failure mode ATT&CK had before Atomic Red Team in 2017.
 
@@ -39,7 +39,9 @@ atomic-atlas exec AML.T0051.001/rag_corpus \
   --target http://localhost:8080 \
   --profile targets/dvaa_local.yaml \
   --authorized                                                 # run the flagship atomic
-atomic-atlas report --input results.json --format navigator    # ATLAS Navigator layer JSON
+                                                               # (appends to ./atomic-atlas-engagement/)
+atomic-atlas report --format findings                          # stakeholder verdict + evidence
+atomic-atlas report --format navigator                         # ATLAS Navigator layer JSON
 ```
 
 > **Authorization required.** Running these tests against systems you do not own or have written permission to test is unethical and likely illegal. The `--authorized` flag is your confirmation.
@@ -50,15 +52,15 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 
 ## Current status
 
-**128 tests passing, 1 skipped.** v0.1 is keynote-ready; v0.2 is in flight.
+**165 tests passing, 1 skipped.** v0.1 is keynote-ready; v0.2 is largely shipped.
 
-> **About DVAA in this repo.** Most examples target [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), a vulnerability simulator with scripted phrase-matched responses. It's the right harness to verify the runner mechanically, but it does not behave like a real LLM agent — single-shot LLM-generated payloads may not hit DVAA's narrow trigger set. For LLM-behavior validation, use Lobster (planned for v0.2; see [openspec/changes/vulnerable-agent](openspec/changes/vulnerable-agent)) or a real target you control.
+> **About DVAA in this repo.** Most examples target [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent), a vulnerability simulator with scripted phrase-matched responses. It's the right harness to verify the runner mechanically, but it does not behave like a real LLM agent — single-shot LLM-generated payloads may not hit DVAA's narrow trigger set. For LLM-behavior validation, use Lobster (planned for v0.4; see [openspec/changes/vulnerable-agent](openspec/changes/vulnerable-agent)) or a real target you control.
 
 ### Across all OpenSpec changes
 
 | Spec | Status | Notes |
 |---|---|---|
-| **atomic-format** | ✅ Shipped | Atomic markdown schema + parser. 27 atomics, 19 ATLAS techniques. |
+| **atomic-format** | ✅ Shipped | Atomic markdown schema + parser. 36 atomics, 19 ATLAS techniques (12/29 high-confidence agentic). |
 | **agentic-targets** | ✅ Mostly shipped | 6 adapters live (`direct_chat`, `rag_corpus`, `mcp_server`, `tool_response`, `document_upload`, `webhook`). Missing: A2A, web_fetch, email, computer_use, model_api. |
 | **agent-runner** | ✅ Shipped | Claude Code skill + MCP server (`atomic-atlas-mcp`). |
 | **cli-and-reporting** | ✅ Shipped | `recon`, `list`, `validate`, `exec`, `report`, `runbook`, `adapt`. Reporters: navigator, coverage, markdown. |
@@ -72,8 +74,9 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 ### PRD milestones
 
 - **v0.1 — Keynote-ready**: 14/16 ✅. Open: git tag `v0.1.0`, live keynote dry-run.
-- **v0.2 — A2A, scoring, kill chains**: 2/9 done (scoring + adapter). Open: A2A target, web/email/computer-use targets, kill-chain runbooks, engagement runbooks, atomic catalog expansion (17 new ATLAS techniques), Lobster, cost telemetry, runbook reporters.
-- **v0.3 — Community pipeline**: not started. CI, PyPI, sibling vulnerable agents.
+- **v0.2 — Scoring, adaptation, engagement memory**: scoring tiers + `adapt` + engagement/Findings shipped. Open: A2A target, canonical kill-chain + engagement-template runbooks, catalog expansion toward the remaining high-confidence agentic techniques (12/29 covered), cost telemetry, runbook reporters.
+- **v0.3 — Community pipeline**: not started. CI, PyPI, Pinecone adapter, sibling vulnerable agents.
+- **v0.4 — The agent that tests the agent**: web/email/computer-use targets (12/12 vectors), generic-agent skill, Lobster vulnerable LangGraph agent.
 
 ### What's next — ranked by leverage
 
@@ -86,22 +89,13 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 **Tier 2 — fills demonstrable gaps:**
 
 4. **A2ATarget** — unblocks `RB-DVAA-L4-02` (3 a2a_message atomics already shipped, no executor). Agent-to-agent attack story is one of the Five Dimensions. ~half-day.
-5. **Backfill remaining 21 atomics with `success_indicators` / `judge_guidance`** — judge tier carries the load alone for most atomics today. ~1 day.
+5. **Backfill atomics that still rely on the judge tier alone with `success_indicators` / `judge_guidance`** — gives the indicator tier something to fall back to when no judge LLM is reachable. ~1 day.
 
 **Tier 3 — debt + polish:**
 
 6. Tempfile leak fix in `_build_attack` RedTeamingAttack path (small, surgical).
 7. `atomic-atlas init-profile` — CLI generator from recon output (operator UX).
 8. Cost estimation before exec; `last_verified_date` field + model-drift CI.
-
-**v0.2 simplification pass shipped this session** (commits `ac495c9` → `6d81421`):
-- Archived 6 shipped OpenSpec changes; active spec dir down from 10 to 4.
-- Single LLM factory (`src/atomic_atlas/llm.py`) replaces 3 duplicated chat-target setups.
-- Frontmatter shrunk from 15 → 13 fields. Dropped `pyrit_orchestrator` + `pyrit_scorer` legacy class names; replaced with one `multi_turn` boolean.
-- Dropped the unimplemented `composite` scorer strategy and the legacy `SubStringScorer` tier (now `judge` → `indicators`, two tiers).
-- Refusal short-circuit collapsed from a 3-mode enum to a `scoring.refusal: bool`.
-- Env vars consolidated: `ATOMIC_ATLAS_NO_ATTACKER_LLM` + `_SCORING` → `ATOMIC_ATLAS_OFFLINE`; `ATTACKER_MODEL` + `ADAPTER_MODEL` → `LLM_MODEL`.
-- CLI down from 11 commands to 9 (`runbook show` removed; `runbook validate` merged into top-level `validate`, which now handles atomics + runbooks in one pass).
 
 ---
 
@@ -157,7 +151,9 @@ See **[docs/agent-runner.md](docs/agent-runner.md)** for the full surface, fallb
 
 ---
 
-## Seed atomics (v0.1)
+## Seed atomics (original v0.1 priority set)
+
+The 9 priority techniques the catalog started from. It has since grown to **36 atomics across 19 ATLAS techniques** — run `atomic-atlas report --format coverage` for the live matrix.
 
 | Technique | Vector(s) |
 |---|---|
@@ -202,4 +198,4 @@ The goal: a coverage commons for AI security teams, so "ATLAS-aligned" becomes a
 - [PyRIT](https://github.com/Azure/PyRIT) — the orchestration backbone this project extends
 - [DVAA](https://github.com/opena2a-org/damn-vulnerable-ai-agent) — the recommended test target
 - [MITRE Arsenal](https://github.com/mitre-atlas/arsenal) — predecessor (stale, no agentic coverage)
-- [Promptfoo ATLAS plugin](https://www.promptfoo.dev/docs/red-team/mitre-atlas/) — 6/167 coverage, no entry-vector dimension
+- [Promptfoo ATLAS plugin](https://www.promptfoo.dev/docs/red-team/mitre-atlas/) — tactic-level only: 39 generic plugins → 14/16 ATLAS tactics, 0/2 AI-native tactics, 0 techniques by ID; no entry-vector dimension
