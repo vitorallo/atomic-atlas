@@ -116,6 +116,7 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 | [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators / substring), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
 | [docs/adapt.md](docs/adapt.md) | Payload adapter: bundle format, prompt structure, observed-evidence selection rules, audit trail |
 | [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
+| [docs/pyrit.md](docs/pyrit.md) | How atomic-atlas uses PyRIT: why the dependency, exact symbols consumed (target/attack/scorer/memory), what we deliberately don't take, version caveat, the integration seam |
 | [docs/targets.md](docs/targets.md) | Target profile format, `target_context` for domain-aware payload adaptation, DVAA setup, auth schemes |
 | [docs/agent-runner.md](docs/agent-runner.md) | Claude Code skill + MCP server, when to use them vs the CLI |
 | [docs/atlas-coverage.md](docs/atlas-coverage.md) | Project-wide ATLAS v5.6.0 coverage stats (techniques, vectors, tactics, runbooks) |
