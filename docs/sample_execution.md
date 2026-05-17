@@ -215,6 +215,13 @@ unchanged.
 
 ---
 
+The committed artifacts from this exact run — `results.jsonl`, the findings /
+markdown / navigator / coverage reports, and the recon capture — are in
+[`docs/sample_assessment1/`](sample_assessment1/) (see its
+[`README.md`](sample_assessment1/README.md) for the file map).
+
+---
+
 *See also: [`docs/quickstart.md`](quickstart.md) (first-run walkthrough),
 [`docs/pyrit.md`](pyrit.md) (why the Python version matters),
 [`docs/scoring.md`](scoring.md) (verdict/severity derivation + Evidence schema).*

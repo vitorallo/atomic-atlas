@@ -12,6 +12,20 @@ atomic-atlas fills that gap.
 
 ---
 
+## 📄 See a real assessment
+
+**→ [Sample assessment, explained (PDF)](docs/sample_assessment1/sample_assessment_explained.pdf)** — a real, live engagement against DVAA LegacyBot, walked through end to end: what ran, why a multi-turn run takes minutes, and how to read the resulting **VULNERABLE / HIGH** finding with extracted credentials.
+
+| | |
+|---|---|
+| 📄 **Explainer PDF** | [docs/sample_assessment1/sample_assessment_explained.pdf](docs/sample_assessment1/sample_assessment_explained.pdf) |
+| 📝 **Step-by-step walkthrough** | [docs/sample_execution.md](docs/sample_execution.md) — every command + output |
+| 📦 **Raw artifacts (committed verbatim)** | [docs/sample_assessment1/](docs/sample_assessment1/) — `results.jsonl`, findings / navigator / coverage / run reports, recon ([file map](docs/sample_assessment1/README.md)) |
+
+Nothing in the sample is synthetic — it is the exact output of one `recon → exec → report` run.
+
+---
+
 ## What it is
 
 A library of small, self-contained adversarial tests, each mapped to an ATLAS technique ID and an entry vector. Backed by [PyRIT](https://github.com/Azure/PyRIT) for payload generation and attack orchestration. Adds what PyRIT doesn't have: agentic delivery targets for the 11 non-chat entry vectors (RAG injection, MCP tool poisoning, tool response interception, document upload, webhook, email, A2A, computer-use).
@@ -66,7 +80,7 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 | **cli-and-reporting** | ✅ Shipped | `recon`, `list`, `validate`, `exec`, `report`, `runbook`, `adapt`. Reporters: navigator, coverage, markdown. |
 | **runbooks** | ✅ Shipped | DAG executor + 22 DVAA runbooks. Missing: kill-chain runbooks, engagement templates. |
 | **payload-adaptation** | ✅ Shipped | `target_context` profile field, `RedTeamingAttack` integration, `--hitl`. |
-| **scoring-tiers** | ✅ Shipped (v0.2) | Three-tier scorer (judge → indicators → substring), first-class `Evidence`, regex extractors, refusal short-circuit. Live-verified end-to-end against DVAA. |
+| **scoring-tiers** | ✅ Shipped (v0.2) | Two-tier scorer (judge → indicators), first-class `Evidence`, regex extractors, refusal short-circuit. Live-verified end-to-end against DVAA. |
 | **payload-adapter** | ✅ Shipped (v0.2) | `atomic-atlas adapt` CLI + `exec --payload-file` handoff. Bundle round-trip, observed-evidence selection. Live-verified end-to-end. |
 | **atlas-agentic-coverage** | ⏳ Partial | Coverage tracking; updated as atomics are added. |
 | **vulnerable-agent (Lobster)** | ❌ Not started | Custom vulnerable LangGraph agent. The DVAA phrase-matcher limit makes Lobster more valuable than originally scoped. |
@@ -108,7 +122,8 @@ For the full walkthrough — installing, bringing up [DVAA](https://github.com/o
 | [docs/use-cases.md](docs/use-cases.md) | Three end-to-end walkthroughs: smoke a single technique, chained kill chain with `adapt`, full engagement runbook |
 | [docs/benchmarks.md](docs/benchmarks.md) | 12 live runs across 6 DVAA bots — same response, three judge verdicts; runtime as fitness signal; reproducible commands |
 | [docs/cli-reference.md](docs/cli-reference.md) | Per-subcommand reference: every flag with copy-pasteable examples |
-| [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators / substring), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
+| [docs/scoring.md](docs/scoring.md) | Scorer tiers (judge / indicators), Evidence schema, `judge_guidance` / `judge_examples` / `extractors` authoring |
+| [docs/sample_execution.md](docs/sample_execution.md) | Verbatim real end-to-end run (recon → exec → findings) against DVAA LegacyBot; committed artifacts in [docs/sample_assessment1/](docs/sample_assessment1/) |
 | [docs/adapt.md](docs/adapt.md) | Payload adapter: bundle format, prompt structure, observed-evidence selection rules, audit trail |
 | [docs/install.md](docs/install.md) | Install matrix (`base` / `[orchestrator]` / `[mcp-server]`), why PyRIT is optional, troubleshooting |
 | [docs/pyrit.md](docs/pyrit.md) | How atomic-atlas uses PyRIT: why the dependency, exact symbols consumed (target/attack/scorer/memory), what we deliberately don't take, version caveat, the integration seam |

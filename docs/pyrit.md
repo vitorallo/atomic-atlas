@@ -5,7 +5,7 @@ atomic-atlas is a **PyRIT extension, not a re-implementation**. Microsoft
 `atomic-atlas exec`: it owns the attack loop, the attacker-LLM mutation, the
 scoring graph, and conversation memory. atomic-atlas contributes the parts PyRIT
 does not have — the **12 agentic delivery vectors**, **ATLAS technique keying**,
-the **three-tier scorer + Evidence**, the **`adapt` payload generator**, and the
+the **two-tier scorer + Evidence**, the **`adapt` payload generator**, and the
 **engagement / Finding** layer.
 
 This document states the dependency precisely: *why* we need PyRIT, *exactly
@@ -124,7 +124,7 @@ Every symbol atomic-atlas imports from PyRIT, why, and where:
   truth.
 - **PyRIT's broader orchestrator zoo** — only the two attack classes above are
   used. Everything else (technique keying, the 12-vector taxonomy, the
-  three-tier scorer + Evidence, `adapt`, engagement memory, Findings, Navigator
+  two-tier scorer + Evidence, `adapt`, engagement memory, Findings, Navigator
   output) is atomic-atlas's own layer on top.
 - **PyRIT's scoring verdict as the final word** — PyRIT's judge is one of three
   tiers (judge → indicators → deterministic substring). The tier actually used

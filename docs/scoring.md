@@ -209,7 +209,7 @@ Substring scoring would have flagged Run 2 either way (the indicators match) but
 
 ## Common gotchas
 
-- **Empty `## Success criteria`** — the auto path falls back to indicators or legacy substring. Either write the prose or set `scoring.strategy: indicators` explicitly.
+- **Empty `## Success criteria`** — the auto path falls back to indicators. Either write the prose or set `scoring.strategy: indicators` explicitly.
 - **Judge cost** — the judge makes one LLM call per run. With 3 runs × 5 atomics that's 15 calls; with `RedTeamingAttack` add the attacker calls on top. Use `scoring.judge_model: gpt-4o-mini` for cheap atomics.
 - **Variance** — two runs of the same atomic against the same response can produce different judge verdicts. This is well-known LLM-judge behavior. Self-consistency (N=3 majority vote) lands in v0.3 if it becomes a problem.
 - **Regex `.` matches newlines?** — by default no. Patterns are compiled with `re.IGNORECASE | re.MULTILINE` but not `re.DOTALL`. Use `(?s)` inline if you need cross-line matching.

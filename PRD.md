@@ -76,7 +76,7 @@ The flagship demo must run **`recon → exec → report` end-to-end against a lo
 - **The filesystem is the schema.** One markdown file per `(technique × vector)` cell — path `atomics/<ATLAS-id>/<vector>.md` encodes both dimensions. ~5 lines of YAML frontmatter + a prose body (Why this matters, Prerequisites, Attack strategy, Interaction, Success criteria, ATLAS mitigations, Cleanup). No registry, no plugin loader. The format is **AI-generatable**: an LLM given `SPEC.md` writes a valid atomic unaided.
 - **Intent over implementation.** The atomic says *what* the attack does and *how to recognize success* in plain prose. The runner figures out *how* to execute it against the specific target.
 - **PyRIT under the hood, optional at install.** atomic-atlas contributes new PyRIT `PromptTarget` subclasses for agentic vectors and uses `RedTeamingAttack`/`AttackAdversarialConfig` for multi-turn mutation. PyRIT is an **optional extra** (`[orchestrator]`) — `list`/`recon`/`report`/`validate`/MCP server run without it.
-- **LLM where it matters.** `adapt` tunes the seed payload to the target (consuming atomic intent + `target_context` + recon JSON + prior evidence). A **three-tier scorer** (LLM judge → indicators → deterministic substring fallback) produces a binary verdict *and* first-class structured **Evidence** (`tier`, `judge_reasoning`, `matched_indicators`, `extracted`, `duration_ms`).
+- **LLM where it matters.** `adapt` tunes the seed payload to the target (consuming atomic intent + `target_context` + recon JSON + prior evidence). A **two-tier scorer** (LLM judge → deterministic indicators fallback) produces a binary verdict *and* first-class structured **Evidence** (`tier`, `judge_reasoning`, `matched_indicators`, `extracted`, `duration_ms`).
 - **Evidence is the finding.** `exec` and `runbook exec` append timestamped JSONL into a per-engagement directory. `report --format findings` aggregates by `(atomic, target)` into a stakeholder-facing markdown: verdict (`VULNERABLE` / `PARTIALLY_VULNERABLE` / `NOT_VULNERABLE` / `INCONCLUSIVE`) + severity + summary + extracted artifacts + ATLAS mitigations.
 - **Runbooks are first-class.** Ordered atomic chains (kill chains) with `on_failure` policies (stop / continue / retry).
 - **Runs, not pass/fail.** Every atomic reports a success rate over N runs — LLMs are non-deterministic and coverage claims must reflect that.
@@ -105,7 +105,7 @@ atomic-atlas is a PyRIT extension, not a standalone orchestrator. PyRIT handles 
 `adapt` emits a domain-tuned bundle (rationale + payload + suggested observations + suggested indicators) from atomic intent, `target_context`, recon JSON, and prior evidence. Clean handoff to `exec --payload-file`. Audit trail via `generator_prompt_hash`.
 
 ### R7 — Scoring + Evidence (MUST)
-Three-tier scorer (judge > indicators > legacy substring). Every scored run emits a first-class `Evidence` record. No silent downgrade — the tier used is recorded.
+Two-tier scorer (judge > indicators). Every scored run emits a first-class `Evidence` record. No silent downgrade — the tier used is recorded.
 
 ### R8 — Engagement memory + Findings (MUST)
 Append-only JSONL per engagement dir (default `./atomic-atlas-engagement/`; override `--engagement` / `ATOMIC_ATLAS_ENGAGEMENT_DIR`). `report --format findings` aggregates to verdict + severity (5 levels, optional `severity_floor`) + summary + artifacts + mitigations. Filters `--target`, `--since`. No new LLM call.
@@ -138,7 +138,7 @@ A skill reads atomic intent, inspects the target, and reasons about delivery for
 - [ ] Initial git tag `v0.1.0`; full keynote rehearsal (architecture verified live against DVAA)
 
 ### v0.2 — Scoring, adaptation, engagement memory (shipped)
-- [x] `success_indicators` + **LLM judge scorer** — three-tier stack + first-class `Evidence`; live-verified against DVAA (real LegacyBot creds extracted end-to-end). See [`docs/scoring.md`](docs/scoring.md).
+- [x] `success_indicators` + **LLM judge scorer** — two-tier stack + first-class `Evidence`; live-verified against DVAA (real LegacyBot creds extracted end-to-end). See [`docs/scoring.md`](docs/scoring.md).
 - [x] **LLM-driven `adapt`** + `exec --payload-file` handoff; live-verified against DVAA-LegacyBot (2/2 in 15.8s). See [`docs/adapt.md`](docs/adapt.md).
 - [x] **Engagement memory + Finding model + `report --format findings`** (commit `4c5421d`); post-merge simplification pass (`_resolve_target_id`, `asdict`, flattened `aggregate`).
 - [ ] `A2ATarget` (unblocks `RB-DVAA-L4-02`; 3 `a2a_message` atomics already shipped)

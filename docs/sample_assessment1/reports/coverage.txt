@@ -1,0 +1,24 @@
+Technique                 CHAT       RAG       DOC      TOOL       MCP      HOOK       A2A
+------------------------------------------------------------------------------------------
+AML.T0011.002                ·         ·         ·         ·         ○         ·         ·
+AML.T0051.000                ○         ·         ·         ·         ·         ·         ·
+AML.T0051.001                ·         ○         ○         ○         ○         ·         ○
+AML.T0053                    ·         ·         ·         ○         ·         ·         ·
+AML.T0054                    ○         ·         ·         ·         ·         ·         ·
+AML.T0065                    ○         ·         ·         ·         ·         ·         ·
+AML.T0080                    ○         ·         ·         ·         ·         ·         ·
+AML.T0080.000                ○         ·         ·         ·         ·         ·         ·
+AML.T0083                 100%         ·         ·         ·         ·         ·         ·
+AML.T0084                    ○         ·         ·         ·         ·         ·         ·
+AML.T0086                    ·         ·         ·         ·         ○         ·         ○
+AML.T0093                    ·         ·         ·         ·         ·         ○         ·
+AML.T0097                    ○         ·         ·         ·         ·         ·         ·
+AML.T0098                    ·         ·         ·         ○         ·         ·         ·
+AML.T0099                    ·         ·         ·         ○         ○         ·         ·
+AML.T0104                    ·         ·         ·         ·         ○         ·         ·
+AML.T0108                    ·         ·         ·         ·         ○         ·         ○
+AML.T0110                    ·         ·         ·         ·         ○         ·         ·
+AML.T0112                    ○         ·         ·         ·         ·         ·         ·
+UNCLASSIFIED.self-replicating-memory         ○         ·         ·         ·         ·         ·         ·
+
+● / ○  atomic exists  ·  no atomic  |  % = success rate from last run
